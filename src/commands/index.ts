@@ -21,35 +21,55 @@ export function registerCommands(
   context.subscriptions.push(
     vscode.commands.registerCommand('openspec.openViewer', async (changeNameOrItem?: any) => {
       let targetChange: string | undefined;
+      let targetCapability: string | undefined;
 
       if (typeof changeNameOrItem === 'string') {
-        targetChange = changeNameOrItem;
+        if (changeNameOrItem.startsWith('spec:')) {
+          targetCapability = changeNameOrItem.slice(5);
+        } else if (store.getState().specs.some((s) => s.capability === changeNameOrItem)) {
+          targetCapability = changeNameOrItem;
+        } else {
+          targetChange = changeNameOrItem;
+        }
+      } else if (changeNameOrItem && typeof changeNameOrItem.spec?.capability === 'string') {
+        targetCapability = changeNameOrItem.spec.capability;
       } else if (changeNameOrItem && typeof changeNameOrItem.change?.name === 'string') {
         targetChange = changeNameOrItem.change.name;
       } else {
-        // Prompt user to pick an active change
+        // Prompt user to pick an active change or living spec
         const state = store.getState();
-        if (state.changes.length === 0) {
-          vscode.window.showInformationMessage('No active OpenSpec changes found to view.');
+        if (state.changes.length === 0 && state.specs.length === 0) {
+          vscode.window.showInformationMessage('No active OpenSpec changes or living specs found to view.');
           return;
         }
 
-        const picked = await vscode.window.showQuickPick(
-          state.changes.map((c) => ({
-            label: c.name,
-            description: `${c.taskProgress.completed}/${c.taskProgress.total} tasks`,
-            change: c,
+        const items: Array<vscode.QuickPickItem & { changeName?: string; capability?: string }> = [
+          ...state.changes.map((c) => ({
+            label: `$(git-pull-request) ${c.name}`,
+            description: `Active change • ${c.taskProgress.completed}/${c.taskProgress.total} tasks`,
+            changeName: c.name,
           })),
-          { placeHolder: 'Select an OpenSpec change to view' }
-        );
+          ...state.specs.map((s) => ({
+            label: `$(book) ${s.capability}`,
+            description: `Living spec • ${s.requirements.length} reqs`,
+            capability: s.capability,
+          })),
+        ];
+
+        const picked = await vscode.window.showQuickPick(items, {
+          placeHolder: 'Select an OpenSpec change or living specification to view',
+        });
 
         if (picked) {
-          targetChange = picked.label;
+          targetChange = picked.changeName;
+          targetCapability = picked.capability;
         }
       }
 
-      if (targetChange) {
-        SpecViewerPanel.render(context.extensionUri, store, targetChange);
+      if (targetCapability) {
+        SpecViewerPanel.renderLivingSpec(context.extensionUri, store, targetCapability, cli);
+      } else if (targetChange) {
+        SpecViewerPanel.render(context.extensionUri, store, targetChange, cli);
       }
     })
   );

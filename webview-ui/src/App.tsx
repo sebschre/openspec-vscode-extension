@@ -7,9 +7,11 @@ import { ChangeOverview } from './components/ChangeOverview';
 import { RequirementCard } from './components/RequirementCard';
 import { LiveTaskList } from './components/LiveTaskList';
 import { NewChangeForm } from './components/NewChangeForm';
+import { LivingSpecViewer } from './components/LivingSpecViewer';
 
 export function App() {
   const [change, setChange] = useState<ChangeDetail | null>(null);
+  const [livingSpec, setLivingSpec] = useState<SpecDetail | null>(null);
   const [isNewChangeMode, setIsNewChangeMode] = useState<boolean>(false);
   const [availableSchemas, setAvailableSchemas] = useState<string[]>(['spec-driven']);
   const [activeTab, setActiveTab] = useState<'overview' | 'specs' | 'tasks'>('overview');
@@ -20,9 +22,15 @@ export function App() {
       const msg = event.data;
       if (msg.type === 'SET_CHANGE' || msg.type === 'UPDATE_STATE') {
         setChange(msg.change);
+        setLivingSpec(null);
+        setIsNewChangeMode(false);
+      } else if (msg.type === 'SET_LIVING_SPEC') {
+        setLivingSpec(msg.spec);
+        setChange(null);
         setIsNewChangeMode(false);
       } else if (msg.type === 'SET_NEW_CHANGE_MODE') {
         setIsNewChangeMode(true);
+        setLivingSpec(null);
         if (msg.availableSchemas) {
           setAvailableSchemas(msg.availableSchemas);
         }
@@ -41,14 +49,19 @@ export function App() {
     return <NewChangeForm availableSchemas={availableSchemas} />;
   }
 
+  if (livingSpec) {
+    return <LivingSpecViewer spec={livingSpec} />;
+  }
+
   if (!change) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px', opacity: 0.7 }}>
         <div className="codicon codicon-loading codicon-modifier-spin" style={{ fontSize: '32px', marginBottom: '12px' }} />
-        <div>Loading OpenSpec change details...</div>
+        <div>Loading OpenSpec details...</div>
       </div>
     );
   }
+
 
   return (
     <div style={{ maxWidth: '960px', margin: '0 auto' }}>

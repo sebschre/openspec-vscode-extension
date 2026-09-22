@@ -1,7 +1,9 @@
-import { ChangeDetail } from '../core/types';
+import { ChangeDetail, SpecDetail } from '../core/types';
 
 export type ExtensionToWebviewMessage =
   | { type: 'SET_CHANGE'; change: ChangeDetail }
+  | { type: 'SET_LIVING_SPEC'; spec: SpecDetail }
+
   | { type: 'UPDATE_STATE'; change: ChangeDetail }
   | { type: 'NOTICE'; message: string; level: 'info' | 'warning' | 'error' }
   | { type: 'SET_NEW_CHANGE_MODE'; availableSchemas?: string[] }

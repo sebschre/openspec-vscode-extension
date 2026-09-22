@@ -45,6 +45,11 @@ export class EventEmitter<T> {
   }
 }
 
+export enum ViewColumn {
+  One = 1,
+  Two = 2,
+}
+
 export const Uri = {
   file: (fsPath: string) => ({
     fsPath,
@@ -52,6 +57,98 @@ export const Uri = {
     scheme: 'file',
     toString: () => `file://${fsPath}`,
   }),
+  joinPath: (base: any, ...paths: string[]) => ({
+    fsPath: [base.fsPath, ...paths].join('/'),
+    path: [base.path, ...paths].join('/'),
+    scheme: base.scheme,
+    toString: () => `file://${[base.fsPath, ...paths].join('/')}`,
+  }),
+};
+
+export class MockWebviewPanel {
+  public title: string;
+  public webview: {
+    html: string;
+    messagesSent: any[];
+    onDidReceiveMessage: (cb: any) => { dispose: () => void };
+    postMessage: (msg: any) => Promise<boolean>;
+    asWebviewUri: (uri: any) => any;
+    cspSource: string;
+  };
+  private _disposed = false;
+  private _disposeListeners: (() => void)[] = [];
+
+  constructor(title: string) {
+    this.title = title;
+    const messagesSent: any[] = [];
+    this.webview = {
+      html: '',
+      messagesSent,
+      onDidReceiveMessage: (_cb: any) => ({ dispose: () => {} }),
+      postMessage: async (msg: any) => {
+        messagesSent.push(msg);
+        return true;
+      },
+      asWebviewUri: (uri: any) => uri,
+      cspSource: 'mock-csp',
+    };
+  }
+
+  reveal(_col?: any) {}
+
+  onDidDispose(cb: () => void) {
+    this._disposeListeners.push(cb);
+    return { dispose: () => {} };
+  }
+
+  dispose() {
+    if (!this._disposed) {
+      this._disposed = true;
+      this._disposeListeners.forEach((l) => l());
+    }
+  }
+}
+
+export const commands = {
+  _registered: new Map<string, Function>(),
+  registerCommand(id: string, handler: Function) {
+    this._registered.set(id, handler);
+    return { dispose: () => this._registered.delete(id) };
+  },
+  async executeCommand(id: string, ...args: any[]) {
+    const fn = this._registered.get(id);
+    if (fn) {
+      return await fn(...args);
+    }
+  },
+};
+
+export const window = {
+  createWebviewPanel: (_viewType: string, title: string, _col: any, _opt: any) => {
+    return new MockWebviewPanel(title);
+  },
+  showInformationMessage: async (..._args: any[]) => undefined,
+  showWarningMessage: async (..._args: any[]) => undefined,
+  showErrorMessage: async (..._args: any[]) => undefined,
+  showQuickPick: async (items: any[]) => items[0],
+  setStatusBarMessage: (_msg: string, _timeout?: number) => ({ dispose: () => {} }),
+  createOutputChannel: (_name: string) => ({
+    show: () => {},
+    appendLine: () => {},
+    dispose: () => {},
+  }),
+};
+
+export const env = {
+  clipboard: {
+    writeText: async (_text: string) => {},
+    readText: async () => '',
+  },
+};
+
+export const workspace = {
+  openTextDocument: async (_uri: any) => ({}),
+  showTextDocument: async (_doc: any) => ({}),
 };
 
 export class LanguageModelChatMessage {

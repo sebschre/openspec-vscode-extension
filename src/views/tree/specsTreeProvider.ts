@@ -14,13 +14,11 @@ class SpecItemElement extends vscode.TreeItem {
     this.iconPath = new vscode.ThemeIcon('book');
     this.contextValue = 'spec';
 
-    if (spec.filePath) {
-      this.command = {
-        command: 'vscode.open',
-        title: 'Open Spec',
-        arguments: [vscode.Uri.file(spec.filePath)],
-      };
-    }
+    this.command = {
+      command: 'openspec.openViewer',
+      title: 'Open Spec',
+      arguments: [this],
+    };
   }
 }
 
