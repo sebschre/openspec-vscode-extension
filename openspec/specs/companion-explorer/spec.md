@@ -51,5 +51,5 @@ The extension SHALL display an "Archive" tree view in the OpenSpec Activity Bar 
 The extension SHALL provide inline action icons and context menu actions for change and spec items in the explorer.
 
 #### Scenario: Creating a new change from explorer
-- **WHEN** the user clicks the "New Change" action button in the Active Changes view header
-- **THEN** the system prompts the user for a change name and initiates the change scaffolding command
+- **WHEN** the user clicks the "New Change" action button in the Active Changes view header or triggers the `openspec.newChange` command
+- **THEN** the system opens the Visual Change Creation form in the Companion Webview panel instead of prompting with a single-line kebab-case input box

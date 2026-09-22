@@ -25,4 +25,26 @@ describe('OpenSpecCliBridge', () => {
       assert.strictEqual(isAvailable, false);
     }
   });
+
+  it('should format newChange arguments with schema and description', async () => {
+    class TestCliBridge extends OpenSpecCliBridge {
+      public capturedArgs: string[] = [];
+      public override async execute(args: string[]): Promise<any> {
+        this.capturedArgs = args;
+        return { stdout: '', stderr: '', code: 0, success: true };
+      }
+    }
+
+    const testBridge = new TestCliBridge(workspaceRoot);
+    await testBridge.newChange('add-test-feature', 'spec-driven', 'A test feature description');
+    assert.deepStrictEqual(testBridge.capturedArgs, [
+      'new',
+      'change',
+      'add-test-feature',
+      '--schema',
+      'spec-driven',
+      '--description',
+      'A test feature description',
+    ]);
+  });
 });

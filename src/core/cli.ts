@@ -86,10 +86,13 @@ export class OpenSpecCliBridge {
     return this.execute(['archive', changeName]);
   }
 
-  public async newChange(changeName: string, schema?: string): Promise<CliExecutionResult> {
+  public async newChange(changeName: string, schema?: string, description?: string): Promise<CliExecutionResult> {
     const args = ['new', 'change', changeName];
     if (schema) {
       args.push('--schema', schema);
+    }
+    if (description && description.trim()) {
+      args.push('--description', description.trim());
     }
     return this.execute(args);
   }

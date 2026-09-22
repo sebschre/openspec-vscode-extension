@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
 import { OpenSpecStateStore } from '../core/store';
 import { OpenSpecCliBridge } from '../core/cli';
 import { SpecViewerPanel } from '../views/webview/specViewerPanel';
@@ -59,51 +57,7 @@ export function registerCommands(
   // Command: New Change
   context.subscriptions.push(
     vscode.commands.registerCommand('openspec.newChange', async () => {
-      const changeName = await vscode.window.showInputBox({
-        prompt: 'Enter a kebab-case name for the new OpenSpec change',
-        placeHolder: 'e.g. add-user-auth',
-        validateInput: (value) => {
-          if (!value || !value.trim()) {
-            return 'Change name cannot be empty';
-          }
-          if (!/^[a-z0-9-]+$/.test(value.trim())) {
-            return 'Change name must be kebab-case (lowercase letters, numbers, and hyphens)';
-          }
-          return null;
-        },
-      });
-
-      if (!changeName) return;
-
-      const trimmed = changeName.trim();
-      const isCliAvailable = await cli.isCliAvailable();
-
-      if (isCliAvailable) {
-        const res = await cli.newChange(trimmed);
-        if (res.success) {
-          vscode.window.showInformationMessage(`Created OpenSpec change '${trimmed}'`);
-        } else {
-          vscode.window.showErrorMessage(`Failed to create change via CLI: ${res.stderr || res.stdout}`);
-        }
-      } else {
-        // Direct filesystem scaffold
-        const state = store.getState();
-        const changeDir = path.join(state.rootPath, 'openspec', 'changes', trimmed);
-        fs.mkdirSync(changeDir, { recursive: true });
-
-        const yamlContent = `schema: spec-driven\n`;
-        const proposalContent = `# Proposal: ${trimmed}\n\n## Why\n\n## What Changes\n\n## Capabilities\n\n### New Capabilities\n\n### Modified Capabilities\n\n## Impact\n`;
-        const tasksContent = `# Tasks\n\n## 1. Implementation\n\n- [ ] 1.1 Initial setup\n`;
-
-        fs.writeFileSync(path.join(changeDir, '.openspec.yaml'), yamlContent, 'utf8');
-        fs.writeFileSync(path.join(changeDir, 'proposal.md'), proposalContent, 'utf8');
-        fs.writeFileSync(path.join(changeDir, 'tasks.md'), tasksContent, 'utf8');
-
-        vscode.window.showInformationMessage(`Scaffolded OpenSpec change '${trimmed}'`);
-      }
-
-      await store.refresh();
-      SpecViewerPanel.render(context.extensionUri, store, trimmed);
+      SpecViewerPanel.renderNewChange(context.extensionUri, store, cli);
     })
   );
 

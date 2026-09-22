@@ -53,3 +53,18 @@ export const Uri = {
     toString: () => `file://${fsPath}`,
   }),
 };
+
+export class LanguageModelChatMessage {
+  constructor(public role: number, public content: string) {}
+  static User(content: string) {
+    return new LanguageModelChatMessage(1, content);
+  }
+  static Assistant(content: string) {
+    return new LanguageModelChatMessage(2, content);
+  }
+}
+
+export const lm = {
+  selectChatModels: async (_selector?: any): Promise<any[]> => [],
+};
+

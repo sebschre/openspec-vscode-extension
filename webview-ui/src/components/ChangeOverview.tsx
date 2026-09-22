@@ -1,3 +1,4 @@
+import { useState } from 'preact/hooks';
 import { ChangeDetail, DesignDecision } from '../../../src/core/types';
 import { getVsCodeApi } from '../vscode';
 
@@ -6,6 +7,7 @@ interface ChangeOverviewProps {
 }
 
 export function ChangeOverview({ change }: ChangeOverviewProps) {
+  const [copied, setCopied] = useState(false);
   const vscode = getVsCodeApi();
 
   const handleValidate = () => {
@@ -14,6 +16,17 @@ export function ChangeOverview({ change }: ChangeOverviewProps) {
 
   const handleArchive = () => {
     vscode.postMessage({ type: 'RUN_ARCHIVE', changeName: change.name });
+  };
+
+  const handleCopyPropose = () => {
+    const promptText = '/opsx-propose';
+    vscode.postMessage({
+      type: 'COPY_AI_PROMPT',
+      changeName: change.name,
+      promptText,
+    });
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -93,6 +106,67 @@ export function ChangeOverview({ change }: ChangeOverviewProps) {
             </div>
           </div>
         )}
+      </div>
+
+      {/* AI Agent Follow-up Action Card */}
+      <div
+        style={{
+          padding: '16px 20px',
+          backgroundColor: 'rgba(0, 120, 212, 0.08)',
+          borderRadius: '8px',
+          border: '1px solid rgba(0, 120, 212, 0.3)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '16px',
+        }}
+      >
+        <div style={{ flex: '1 1 300px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '12px',
+              fontWeight: '700',
+              color: 'var(--accent)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}
+          >
+            <span className="codicon codicon-sparkle" />
+            <span>AI Agent Follow-Up</span>
+          </div>
+          <div style={{ fontSize: '14px', fontWeight: '600', marginTop: '4px' }}>
+            Generate Specs & Implementation Plan with AI
+          </div>
+          <div style={{ fontSize: '13px', opacity: 0.8, marginTop: '2px', lineHeight: '1.4' }}>
+            Run the propose slash command in your AI coding assistant (Cursor, Antigravity, Copilot) to generate delta specs and tasks for this change.
+          </div>
+        </div>
+
+        <button
+          onClick={handleCopyPropose}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '8px 16px',
+            backgroundColor: copied ? 'var(--badge-added, #2ea043)' : 'var(--accent)',
+            color: 'var(--accent-fg)',
+            border: 'none',
+            borderRadius: '6px',
+            fontSize: '13px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            transition: 'background-color 0.2s ease',
+          }}
+        >
+          <span className={`codicon ${copied ? 'codicon-check' : 'codicon-copy'}`} />
+          <span>{copied ? 'Copied Command!' : 'Copy /opsx-propose'}</span>
+        </button>
       </div>
 
       {/* Scope Fence & What Changes */}

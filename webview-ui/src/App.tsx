@@ -6,9 +6,12 @@ import { PipelineRail } from './components/PipelineRail';
 import { ChangeOverview } from './components/ChangeOverview';
 import { RequirementCard } from './components/RequirementCard';
 import { LiveTaskList } from './components/LiveTaskList';
+import { NewChangeForm } from './components/NewChangeForm';
 
 export function App() {
   const [change, setChange] = useState<ChangeDetail | null>(null);
+  const [isNewChangeMode, setIsNewChangeMode] = useState<boolean>(false);
+  const [availableSchemas, setAvailableSchemas] = useState<string[]>(['spec-driven']);
   const [activeTab, setActiveTab] = useState<'overview' | 'specs' | 'tasks'>('overview');
   const vscode = getVsCodeApi();
 
@@ -17,6 +20,12 @@ export function App() {
       const msg = event.data;
       if (msg.type === 'SET_CHANGE' || msg.type === 'UPDATE_STATE') {
         setChange(msg.change);
+        setIsNewChangeMode(false);
+      } else if (msg.type === 'SET_NEW_CHANGE_MODE') {
+        setIsNewChangeMode(true);
+        if (msg.availableSchemas) {
+          setAvailableSchemas(msg.availableSchemas);
+        }
       }
     };
 
@@ -27,6 +36,10 @@ export function App() {
       window.removeEventListener('message', handleMessage);
     };
   }, []);
+
+  if (isNewChangeMode) {
+    return <NewChangeForm availableSchemas={availableSchemas} />;
+  }
 
   if (!change) {
     return (
