@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { OpenSpecStateStore } from '../../core/store';
 import { OpenSpecCliBridge } from '../../core/cli';
+import { TerminalManager } from '../../core/terminal';
 import { ExtensionToWebviewMessage, WebviewToExtensionMessage } from '../../protocol/messages';
 import {
   inferChangeName,
@@ -589,6 +590,16 @@ export class SpecViewerPanel {
       case 'COPY_AI_PROMPT': {
         await vscode.env.clipboard.writeText(message.promptText);
         vscode.window.showInformationMessage('Copied AI prompt to clipboard!');
+        break;
+      }
+      case 'OPEN_TERMINAL': {
+        const col = message.viewColumn ?? vscode.ViewColumn.Beside;
+        TerminalManager.getInstance().getOrCreateTerminal({ viewColumn: col, preserveFocus: false });
+        break;
+      }
+      case 'EXECUTE_TERMINAL_COMMAND': {
+        const col = message.viewColumn ?? vscode.ViewColumn.Beside;
+        TerminalManager.getInstance().executeCommand(message.command, { viewColumn: col, preserveFocus: false });
         break;
       }
     }

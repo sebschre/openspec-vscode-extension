@@ -42,6 +42,13 @@ Refer to the change proposal at openspec/changes/${change.name}/proposal.md and 
     });
   };
 
+  const runApplyInTerminal = () => {
+    vscode.postMessage({
+      type: 'EXECUTE_TERMINAL_COMMAND',
+      command: `/opsx-apply ${change.name}`,
+    });
+  };
+
   // Group tasks by group
   const groupedTasks: Record<string, TaskItem[]> = {};
   for (const task of change.tasks) {
@@ -125,6 +132,28 @@ Refer to the change proposal at openspec/changes/${change.name}/proposal.md and 
           >
             <span className="codicon codicon-copy" />
             <span>Copy AI Prompt</span>
+          </button>
+
+          {/* One-Click Implement in Terminal button */}
+          <button
+            onClick={runApplyInTerminal}
+            title="One-click execution of implementation command in dedicated terminal"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              backgroundColor: 'var(--accent)',
+              color: 'var(--accent-fg)',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: '600',
+            }}
+          >
+            <span className="codicon codicon-terminal" />
+            <span>Implement in Terminal</span>
           </button>
         </div>
       </div>

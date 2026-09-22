@@ -100,6 +100,18 @@
         "title": "Reveal in File Explorer",
         "category": "OpenSpec",
         "icon": "$(folder-opened)"
+      },
+      {
+        "command": "openspec.openTerminal",
+        "title": "Open Dedicated Terminal",
+        "category": "OpenSpec",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "openspec.runInTerminal",
+        "title": "Run in Dedicated Terminal",
+        "category": "OpenSpec",
+        "icon": "$(play)"
       }
     ],
     "menus": {
@@ -113,6 +125,11 @@
           "command": "openspec.newChange",
           "when": "view == openspec.views.changes",
           "group": "navigation@2"
+        },
+        {
+          "command": "openspec.openTerminal",
+          "when": "view =~ /^openspec\\.views\\./",
+          "group": "navigation@3"
         }
       ],
       "view/item/context": [
@@ -143,7 +160,7 @@
     "vscode:prepublish": "npm run build",
     "build": "node esbuild.config.js",
     "watch": "node esbuild.config.js --watch",
-    "test": "node -e \"require('esbuild').buildSync({ entryPoints: ['test/parser.test.ts', 'test/store.test.ts', 'test/cli.test.ts', 'test/archive.test.ts', 'test/inference.test.ts', 'test/e2e-workflow.test.ts', 'test/living-spec-preview.test.ts'], bundle: true, platform: 'node', format: 'cjs', outdir: 'dist-test', alias: { vscode: './test/mockVscode.ts' } })\" && node --test dist-test/*.test.js",
+    "test": "node -e \"require('esbuild').buildSync({ entryPoints: ['test/parser.test.ts', 'test/store.test.ts', 'test/cli.test.ts', 'test/archive.test.ts', 'test/inference.test.ts', 'test/e2e-workflow.test.ts', 'test/living-spec-preview.test.ts', 'test/terminal.test.ts'], bundle: true, platform: 'node', format: 'cjs', outdir: 'dist-test', alias: { vscode: './test/mockVscode.ts' } })\" && node --test dist-test/*.test.js",
     "typecheck": "tsc --noEmit",
     "package": "vsce package"
   },

@@ -21,6 +21,13 @@ export function DesignViewer({ change }: DesignViewerProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleRunProposeInTerminal = () => {
+    vscode.postMessage({
+      type: 'EXECUTE_TERMINAL_COMMAND',
+      command: `/opsx-propose`,
+    });
+  };
+
   const hasDesign =
     change.artifactsPresent.design &&
     change.design &&
@@ -60,27 +67,48 @@ export function DesignViewer({ change }: DesignViewerProps) {
           </p>
         </div>
 
-        <button
-          onClick={handleCopyPropose}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '8px 18px',
-            backgroundColor: copied ? 'var(--badge-added, #2ea043)' : 'var(--accent)',
-            color: 'var(--accent-fg)',
-            border: 'none',
-            borderRadius: '6px',
-            fontSize: '13px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'background-color 0.2s ease',
-            marginTop: '8px',
-          }}
-        >
-          <span className={`codicon ${copied ? 'codicon-check' : 'codicon-copy'}`} />
-          <span>{copied ? 'Copied Command!' : 'Copy /opsx-propose to author Design'}</span>
-        </button>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+          <button
+            onClick={handleCopyPropose}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 16px',
+              backgroundColor: copied ? 'var(--badge-added, #2ea043)' : 'rgba(255, 255, 255, 0.08)',
+              color: 'var(--fg)',
+              border: '1px solid var(--card-border)',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s ease',
+            }}
+          >
+            <span className={`codicon ${copied ? 'codicon-check' : 'codicon-copy'}`} />
+            <span>{copied ? 'Copied Command!' : 'Copy Prompt'}</span>
+          </button>
+
+          <button
+            onClick={handleRunProposeInTerminal}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 18px',
+              backgroundColor: 'var(--accent)',
+              color: 'var(--accent-fg)',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: '600',
+              cursor: 'pointer',
+            }}
+          >
+            <span className="codicon codicon-terminal" />
+            <span>Run /opsx-propose in Terminal</span>
+          </button>
+        </div>
       </div>
     );
   }

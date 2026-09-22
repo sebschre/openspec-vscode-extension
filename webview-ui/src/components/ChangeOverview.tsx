@@ -63,6 +63,13 @@ export function ChangeOverview({ change }: ChangeOverviewProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleRunProposeInTerminal = () => {
+    vscode.postMessage({
+      type: 'EXECUTE_TERMINAL_COMMAND',
+      command: `/opsx-propose`,
+    });
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Validation Top Banner */}
@@ -278,27 +285,50 @@ export function ChangeOverview({ change }: ChangeOverviewProps) {
           </div>
         </div>
 
-        <button
-          onClick={handleCopyPropose}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 16px',
-            backgroundColor: copied ? 'var(--badge-added, #2ea043)' : 'var(--accent)',
-            color: 'var(--accent-fg)',
-            border: 'none',
-            borderRadius: '6px',
-            fontSize: '13px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-            transition: 'background-color 0.2s ease',
-          }}
-        >
-          <span className={`codicon ${copied ? 'codicon-check' : 'codicon-copy'}`} />
-          <span>{copied ? 'Copied Command!' : 'Copy /opsx-propose'}</span>
-        </button>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            onClick={handleCopyPropose}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              backgroundColor: copied ? 'var(--badge-added, #2ea043)' : 'rgba(255, 255, 255, 0.08)',
+              color: 'var(--fg)',
+              border: '1px solid var(--card-border)',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              transition: 'background-color 0.2s ease',
+            }}
+          >
+            <span className={`codicon ${copied ? 'codicon-check' : 'codicon-copy'}`} />
+            <span>{copied ? 'Copied Command!' : 'Copy Prompt'}</span>
+          </button>
+
+          <button
+            onClick={handleRunProposeInTerminal}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              backgroundColor: 'var(--accent)',
+              color: 'var(--accent-fg)',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <span className="codicon codicon-terminal" />
+            <span>Run in Terminal</span>
+          </button>
+        </div>
       </div>
 
       {/* Scope Fence & What Changes */}

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { OpenSpecStateStore } from '../core/store';
 import { OpenSpecCliBridge } from '../core/cli';
+import { TerminalManager } from '../core/terminal';
 import { SpecViewerPanel } from '../views/webview/specViewerPanel';
 
 export function registerCommands(
@@ -182,6 +183,29 @@ export function registerCommands(
 
       if (targetPath) {
         await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(targetPath));
+      }
+    })
+  );
+
+  // Command: Open Dedicated Terminal
+  context.subscriptions.push(
+    vscode.commands.registerCommand('openspec.openTerminal', async () => {
+      TerminalManager.getInstance().getOrCreateTerminal({ viewColumn: vscode.ViewColumn.Beside, preserveFocus: false });
+    })
+  );
+
+  // Command: Run in Dedicated Terminal
+  context.subscriptions.push(
+    vscode.commands.registerCommand('openspec.runInTerminal', async (commandText?: string) => {
+      let cmd = commandText;
+      if (!cmd) {
+        cmd = await vscode.window.showInputBox({
+          prompt: 'Enter command to run in OpenSpec terminal',
+          placeHolder: 'e.g. openspec validate',
+        });
+      }
+      if (cmd) {
+        TerminalManager.getInstance().executeCommand(cmd, { viewColumn: vscode.ViewColumn.Beside, preserveFocus: false });
       }
     })
   );

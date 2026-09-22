@@ -73,73 +73,99 @@ export function App() {
       <div
         style={{
           display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
           gap: '12px',
           borderBottom: '1px solid var(--card-border)',
           marginBottom: '20px',
         }}
       >
-        <button
-          onClick={() => setActiveTab('overview')}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: 'transparent',
-            border: 'none',
-            borderBottom: activeTab === 'overview' ? '2px solid var(--accent)' : '2px solid transparent',
-            color: activeTab === 'overview' ? 'var(--fg)' : 'rgba(255, 255, 255, 0.6)',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: activeTab === 'overview' ? '600' : '400',
-          }}
-        >
-          Proposal (Overview)
-        </button>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setActiveTab('overview')}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: 'transparent',
+              border: 'none',
+              borderBottom: activeTab === 'overview' ? '2px solid var(--accent)' : '2px solid transparent',
+              color: activeTab === 'overview' ? 'var(--fg)' : 'rgba(255, 255, 255, 0.6)',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: activeTab === 'overview' ? '600' : '400',
+            }}
+          >
+            Proposal (Overview)
+          </button>
+
+          <button
+            onClick={() => setActiveTab('specs')}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: 'transparent',
+              border: 'none',
+              borderBottom: activeTab === 'specs' ? '2px solid var(--accent)' : '2px solid transparent',
+              color: activeTab === 'specs' ? 'var(--fg)' : 'rgba(255, 255, 255, 0.6)',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: activeTab === 'specs' ? '600' : '400',
+            }}
+          >
+            Delta Specs ({change.specs.reduce((acc: number, s: SpecDetail) => acc + s.requirements.length, 0)} reqs)
+          </button>
+
+          <button
+            onClick={() => setActiveTab('design')}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: 'transparent',
+              border: 'none',
+              borderBottom: activeTab === 'design' ? '2px solid var(--accent)' : '2px solid transparent',
+              color: activeTab === 'design' ? 'var(--fg)' : 'rgba(255, 255, 255, 0.6)',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: activeTab === 'design' ? '600' : '400',
+            }}
+          >
+            Technical Design {change.design?.decisions.length ? `(${change.design.decisions.length} decisions)` : ''}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('tasks')}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: 'transparent',
+              border: 'none',
+              borderBottom: activeTab === 'tasks' ? '2px solid var(--accent)' : '2px solid transparent',
+              color: activeTab === 'tasks' ? 'var(--fg)' : 'rgba(255, 255, 255, 0.6)',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: activeTab === 'tasks' ? '600' : '400',
+            }}
+          >
+            Tasks Checklist ({change.taskProgress.completed}/{change.taskProgress.total})
+          </button>
+        </div>
 
         <button
-          onClick={() => setActiveTab('specs')}
+          onClick={() => vscode.postMessage({ type: 'OPEN_TERMINAL' })}
+          title="Open dedicated OpenSpec terminal adjacent to this window"
           style={{
-            padding: '8px 16px',
-            backgroundColor: 'transparent',
-            border: 'none',
-            borderBottom: activeTab === 'specs' ? '2px solid var(--accent)' : '2px solid transparent',
-            color: activeTab === 'specs' ? 'var(--fg)' : 'rgba(255, 255, 255, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '6px 12px',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            color: 'var(--fg)',
+            border: '1px solid var(--card-border)',
+            borderRadius: '6px',
+            fontSize: '12px',
             cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: activeTab === 'specs' ? '600' : '400',
+            marginBottom: '4px',
           }}
         >
-          Delta Specs ({change.specs.reduce((acc: number, s: SpecDetail) => acc + s.requirements.length, 0)} reqs)
-        </button>
-
-        <button
-          onClick={() => setActiveTab('design')}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: 'transparent',
-            border: 'none',
-            borderBottom: activeTab === 'design' ? '2px solid var(--accent)' : '2px solid transparent',
-            color: activeTab === 'design' ? 'var(--fg)' : 'rgba(255, 255, 255, 0.6)',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: activeTab === 'design' ? '600' : '400',
-          }}
-        >
-          Technical Design {change.design?.decisions.length ? `(${change.design.decisions.length} decisions)` : ''}
-        </button>
-
-        <button
-          onClick={() => setActiveTab('tasks')}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: 'transparent',
-            border: 'none',
-            borderBottom: activeTab === 'tasks' ? '2px solid var(--accent)' : '2px solid transparent',
-            color: activeTab === 'tasks' ? 'var(--fg)' : 'rgba(255, 255, 255, 0.6)',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: activeTab === 'tasks' ? '600' : '400',
-          }}
-        >
-          Tasks Checklist ({change.taskProgress.completed}/{change.taskProgress.total})
+          <span className="codicon codicon-terminal" style={{ color: 'var(--accent)' }} />
+          <span>Dedicated Terminal</span>
         </button>
       </div>
 

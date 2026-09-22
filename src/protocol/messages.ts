@@ -31,5 +31,7 @@ export type WebviewToExtensionMessage =
   | { type: 'INFER_CHANGE_NAME'; description: string }
   | { type: 'REFINE_MOTIVATION'; description: string }
   | { type: 'SUBMIT_NEW_CHANGE'; name: string; description: string; schema?: string; motivation?: string }
-  | { type: 'CANCEL_NEW_CHANGE' };
+  | { type: 'CANCEL_NEW_CHANGE' }
+  | { type: 'OPEN_TERMINAL'; viewColumn?: number }
+  | { type: 'EXECUTE_TERMINAL_COMMAND'; command: string; viewColumn?: number };
 

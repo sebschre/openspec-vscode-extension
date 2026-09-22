@@ -123,7 +123,43 @@ export const commands = {
   },
 };
 
+export class MockTerminal {
+  public name: string;
+  public options?: any;
+  public textsSent: string[] = [];
+  public isShown = false;
+  public isDisposed = false;
+
+  constructor(name: string, options?: any) {
+    this.name = name;
+    this.options = options;
+  }
+
+  show(_preserveFocus?: boolean) {
+    this.isShown = true;
+  }
+
+  sendText(text: string, _addNewLine = true) {
+    this.textsSent.push(text);
+  }
+
+  dispose() {
+    this.isDisposed = true;
+    _onDidCloseTerminalEmitter.fire(this);
+  }
+}
+
+const _onDidCloseTerminalEmitter = new EventEmitter<any>();
+
 export const window = {
+  terminalsCreated: [] as MockTerminal[],
+  createTerminal: (options: any) => {
+    const name = typeof options === 'string' ? options : options.name || 'Mock Terminal';
+    const term = new MockTerminal(name, options);
+    window.terminalsCreated.push(term);
+    return term;
+  },
+  onDidCloseTerminal: _onDidCloseTerminalEmitter.event,
   createWebviewPanel: (_viewType: string, title: string, _col: any, _opt: any) => {
     return new MockWebviewPanel(title);
   },
@@ -131,6 +167,7 @@ export const window = {
   showWarningMessage: async (..._args: any[]) => undefined,
   showErrorMessage: async (..._args: any[]) => undefined,
   showQuickPick: async (items: any[]) => items[0],
+  showInputBox: async (opt?: any) => opt?.placeHolder || 'mock-input',
   setStatusBarMessage: (_msg: string, _timeout?: number) => ({ dispose: () => {} }),
   createOutputChannel: (_name: string) => ({
     show: () => {},
