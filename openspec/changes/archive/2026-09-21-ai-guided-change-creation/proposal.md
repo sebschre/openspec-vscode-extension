@@ -2,13 +2,13 @@
 
 ## Why
 
-Creating a new OpenSpec change from the VS Code Companion currently prompts the user with a single-line input box asking strictly for a kebab-case name (e.g. `add-user-auth`). If the user attempts to describe their desired change in natural language, input validation fails with a regex error. This inverts the spec-driven development workflow: users are forced to invent a slug before they can describe what they want to build, and any context or problem description they had in mind is lost. 
+Creating a new OpenSpec change from VS Code currently prompts the user with a single-line input box asking strictly for a kebab-case name (e.g. `add-user-auth`). If the user attempts to describe their desired change in natural language, input validation fails with a regex error. This inverts the spec-driven development workflow: users are forced to invent a slug before they can describe what they want to build, and any context or problem description they had in mind is lost. 
 
-Introducing a dedicated visual change creation form in the Companion Webview allows users to describe their intended feature or fix in natural language. The extension can then infer an appropriate kebab-case change name using the VS Code Language Model API (`vscode.lm`) with a reliable offline fallback, scaffold the change while preserving the description in `proposal.md`, and immediately open the Visual Spec Viewer for review and follow-up.
+Introducing a dedicated visual change creation form in the OpenSpec Webview allows users to describe their intended feature or fix in natural language. The extension can then infer an appropriate kebab-case change name using the VS Code Language Model API (`vscode.lm`) with a reliable offline fallback, scaffold the change while preserving the description in `proposal.md`, and immediately open the Visual Spec Viewer for review and follow-up.
 
 ## What Changes
 
-- **Dedicated Visual Creation Form**: Replace the single `showInputBox` prompt for `openspec.newChange` with a dedicated form inside the Companion Webview featuring a multi-line description input, schema selector, and inferred change name field.
+- **Dedicated Visual Creation Form**: Replace the single `showInputBox` prompt for `openspec.newChange` with a dedicated form inside the OpenSpec Webview featuring a multi-line description input, schema selector, and inferred change name field.
 - **AI Name Inference with Heuristic Fallback**: Implement automatic name inference that takes the user's description and generates a concise kebab-case slug (e.g. `add-github-oauth`) using the VS Code Language Model API (`vscode.lm`), falling back to an offline rule-based slugifier when no LM extension is present.
 - **Editable Inferred Name**: Display the inferred name in an editable text field so users can inspect, accept, or customize the slug before scaffolding.
 - **Description Persistence in Scaffolding**: Pass the description to `openspec new change <name> --description <text>` and ensure the description is seeded into the newly created `proposal.md` under `## Why` and `## What Changes`.
@@ -22,7 +22,7 @@ Introducing a dedicated visual change creation form in the Companion Webview all
 
 ### Modified Capabilities
 
-- `companion-explorer`: Update the "Creating a new change from explorer" scenario so that clicking the "New Change" action launches the visual creation form instead of a single kebab-case input box prompt.
+- `spec-explorer`: Update the "Creating a new change from explorer" scenario so that clicking the "New Change" action launches the visual creation form instead of a single kebab-case input box prompt.
 - `visual-spec-viewer`: Add requirements and scenarios for rendering the dedicated "New Change Creation Form", supporting live AI/heuristic name inference, and transitioning smoothly to the change overview upon creation.
 
 ## Impact

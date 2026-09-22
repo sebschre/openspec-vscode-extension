@@ -2,7 +2,7 @@
 
 ## Why
 
-Currently, packaging and releasing the OpenSpec Companion VS Code extension relies on manual local execution of `vsce package` without automated CI validation or deployment pipelines. This introduces the risk of releasing broken builds, requires maintainers to manage sensitive publisher tokens locally, and lacks an auditable trail of release artifacts.
+Currently, packaging and releasing the OpenSpec VS Code extension relies on manual local execution of `vsce package` without automated CI validation or deployment pipelines. This introduces the risk of releasing broken builds, requires maintainers to manage sensitive publisher tokens locally, and lacks an auditable trail of release artifacts.
 
 Establishing a robust GitHub Actions workflow will automate build verification, test suites, VSIX packaging, and secure deployment to the Visual Studio Code Marketplace upon tagged releases and manual workflow dispatch.
 

@@ -82,7 +82,7 @@ Need better tooling for developers.
 ## Capabilities
 
 ### New Capabilities
-- companion-explorer: Tree views for specs
+- spec-explorer: Tree views for specs
 
 ## Impact
 Zero breaking changes.
@@ -92,6 +92,6 @@ Zero breaking changes.
     assert.strictEqual(proposal.why, 'Need better tooling for developers.');
     assert.strictEqual(proposal.whatChanges.length, 2);
     assert.strictEqual(proposal.newCapabilities.length, 1);
-    assert.ok(proposal.newCapabilities[0].includes('companion-explorer'));
+    assert.ok(proposal.newCapabilities[0].includes('spec-explorer'));
   });
 });

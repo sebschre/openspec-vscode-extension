@@ -1,11 +1,11 @@
-# OpenSpec Companion for VS Code
+# OpenSpec for VS Code
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![VS Code](https://img.shields.io/badge/VS%20Code-^1.84.0-blue.svg)](https://marketplace.visualstudio.com)
 
-**OpenSpec Companion** is the official visual workspace inside VS Code for developers using **[OpenSpec](https://github.com/fission-ai/openspec)** to drive AI coding agents.
+**OpenSpec** is a visual workspace inside VS Code for developers using **[OpenSpec](https://github.com/fission-ai/openspec)** to drive AI coding agents.
 
-Just as SpecKit Companion provides a visual companion for `spec-kit`, OpenSpec Companion brings OpenSpec's structured spec-driven development into VS Code:
+This brings OpenSpec's structured spec-driven development into VS Code:
 - **Activity Bar & Sidebar Explorer**: Browse active changes in flight, living capability specifications, and completed archive dossiers at a glance.
 - **Visual Spec & Change Viewer**: Rich interactive webview rendering lifecycle pipeline rails (`Proposal` → `Specs` → `Design` → `Tasks`), Given/When/Then scenario blocks, and structured requirement cards.
 - **Live Interactive Task Checklist**: Real-time bidirectional synchronization with `tasks.md`. Watch tasks tick over live as AI agents work, or toggle them manually from the webview.

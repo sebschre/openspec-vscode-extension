@@ -1,10 +1,10 @@
-# Proposal: OpenSpec Visual Companion Extension for VS Code
+# Proposal: OpenSpec Visual Extension for VS Code
 
 ## Why
 
 OpenSpec enables spec-driven development for AI coding agents and developers. However, developers currently interact with OpenSpec primarily via terminal CLI commands (`openspec status`, `openspec list`, `openspec validate`) or by manually viewing raw markdown files.
 
-Following the proven paradigm established by extensions like `speckit-companion` for GitHub's spec-kit, developers need an interactive, visual IDE companion. This extension surfaces OpenSpec's core artifacts (proposals, delta specs, designs, tasks, and durable living specs) directly in VS Code's sidebar and rich webview tabs, providing real-time visibility, live task tracking during AI implementation runs, and seamless spec steering without leaving the editor.
+Developers need an interactive, visual IDE workspace to streamline spec-driven development. This extension surfaces OpenSpec's core artifacts (proposals, delta specs, designs, tasks, and durable living specs) directly in VS Code's sidebar and rich webview tabs, providing real-time visibility, live task tracking during AI implementation runs, and seamless spec steering without leaving the editor.
 
 ## What Changes
 
@@ -29,7 +29,7 @@ Following the proven paradigm established by extensions like `speckit-companion`
 ## Capabilities
 
 ### New Capabilities
-- `companion-explorer`: OpenSpec Activity Bar view container and sidebar tree providers for Active Changes, Durable Specs, and Archive, featuring status badges and quick actions.
+- `spec-explorer`: OpenSpec Activity Bar view container and sidebar tree providers for Active Changes, Durable Specs, and Archive, featuring status badges and quick actions.
 - `visual-spec-viewer`: Rich webview panel rendering changes and capabilities as structured visual documents with pipeline rails, requirement cards, scenario cards, and live task lists.
 - `workspace-synchronization`: Direct filesystem watching, AST/markdown parsing, and OpenSpec CLI bridge providing real-time reactive state updates and command dispatch.
 

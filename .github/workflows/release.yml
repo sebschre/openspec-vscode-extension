@@ -48,7 +48,7 @@ jobs:
       - name: Locate VSIX artifact
         id: vsix
         run: |
-          VSIX_FILE=$(ls openspec-companion-*.vsix | head -n 1)
+          VSIX_FILE=$(ls *.vsix | head -n 1)
           echo "file=${VSIX_FILE}" >> "$GITHUB_OUTPUT"
           echo "Found VSIX package: ${VSIX_FILE}"
 

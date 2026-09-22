@@ -1,13 +1,13 @@
 {
-  "name": "openspec-companion",
-  "displayName": "OpenSpec Companion",
-  "description": "Visual companion for OpenSpec — inspect and steer living specs, active changes, and AI agent runs directly in VS Code.",
+  "name": "openspec-vscode",
+  "displayName": "OpenSpec",
+  "description": "Visual workspace for OpenSpec — inspect and steer living specs, active changes, and AI agent runs directly in VS Code.",
   "version": "0.1.0",
   "publisher": "openspec",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/openspec/openspec-vscode-companion"
+    "url": "https://github.com/openspec/openspec-vscode-extension"
   },
   "engines": {
     "vscode": "^1.84.0"

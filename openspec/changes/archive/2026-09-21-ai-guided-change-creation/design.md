@@ -2,14 +2,14 @@
 
 ## Context
 
-The VS Code OpenSpec Companion extension provides a tree view (`changesTreeProvider.ts`) and a webview panel (`specViewerPanel.ts`) backed by a Preact single-page application (`webview-ui/`). Currently, `openspec.newChange` relies on `vscode.window.showInputBox` which accepts only a single line and rejects anything not matching `/^[a-z0-9-]+$/`. 
+The OpenSpec VS Code extension provides a tree view (`changesTreeProvider.ts`) and a webview panel (`specViewerPanel.ts`) backed by a Preact single-page application (`webview-ui/`). Currently, `openspec.newChange` relies on `vscode.window.showInputBox` which accepts only a single line and rejects anything not matching `/^[a-z0-9-]+$/`. 
 
 By extending the webview architecture and protocol messages, we can present a dedicated visual form inside `SpecViewerPanel`, derive a kebab-case name using `vscode.lm` (or an offline slugifier fallback), scaffold the change via `OpenSpecCliBridge` with `--description`, and seamlessly switch the viewer into inspection mode for the newly created change.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Provide a dedicated, responsive `<NewChangeForm />` component in the companion webview.
+- Provide a dedicated, responsive `<NewChangeForm />` component in the OpenSpec webview.
 - Support multi-line input for describing the feature, bug fix, or capability in natural language.
 - Implement automated change name inference using `vscode.lm` with an offline rule-based slugifier fallback.
 - Allow users to inspect, edit, and validate the inferred kebab-case slug before creating the change.

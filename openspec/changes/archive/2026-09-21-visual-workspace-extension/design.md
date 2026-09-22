@@ -1,8 +1,8 @@
-# Design: OpenSpec Visual Companion Extension
+# Design: OpenSpec Visual Extension
 
 ## Context
 
-See [proposal.md](proposal.md) for background and motivation. The extension targets modern VS Code (`^1.84.0`) and compatible editors (Cursor, Windsurf, VSCodium). It operates on repositories using OpenSpec, observing workspace filesystem changes in `openspec/**` and providing visual views and interactive companion tooling.
+See [proposal.md](proposal.md) for background and motivation. The extension targets modern VS Code (`^1.84.0`) and compatible editors (Cursor, Windsurf, VSCodium). It operates on repositories using OpenSpec, observing workspace filesystem changes in `openspec/**` and providing visual views and interactive workspace tooling.
 
 ## Goals / Non-Goals
 
@@ -22,7 +22,7 @@ See [proposal.md](proposal.md) for background and motivation. The extension targ
 ### 1. Bundling & Build Pipeline: esbuild
 - **Decision**: Use `esbuild` for extension host and webview script bundling instead of Webpack.
 - **Rationale**: `esbuild` builds the entire extension in under 150ms compared to 3-5 seconds with Webpack. It requires minimal configuration, generates clean source maps, and provides instant watch-mode rebuilds for local development.
-- **Alternative Considered**: Webpack 5 (used in speckit-companion). Rejected due to configuration verbosity, slower rebuilds, and bloated bundle sizes.
+- **Alternative Considered**: Webpack 5. Rejected due to configuration verbosity, slower rebuilds, and bloated bundle sizes.
 
 ### 2. Webview UI Framework: Preact with Codicons & VS Code Design Tokens
 - **Decision**: Build the webview UI using Preact (`10.x`) and `@preact/signals`, styled with VS Code CSS variables and `@vscode/codicons`.

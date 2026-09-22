@@ -14,8 +14,8 @@ describe('ArchiveTreeProvider & Elements', () => {
 
   it('ArchiveItemElement should be collapsed and have no openFolder command', () => {
     const item = new ArchiveItemElement({
-      name: '2026-09-21-visual-companion-extension',
-      path: path.join(workspaceRoot, 'openspec', 'changes', 'archive', '2026-09-21-visual-companion-extension'),
+      name: '2026-09-21-visual-workspace-extension',
+      path: path.join(workspaceRoot, 'openspec', 'changes', 'archive', '2026-09-21-visual-workspace-extension'),
       timestamp: new Date().toISOString(),
     });
 
@@ -33,7 +33,7 @@ describe('ArchiveTreeProvider & Elements', () => {
   });
 
   it('ArchiveArtifactItemElement should have vscode.open command with file URI', () => {
-    const filePath = path.join(workspaceRoot, 'openspec', 'changes', 'archive', '2026-09-21-visual-companion-extension', 'proposal.md');
+    const filePath = path.join(workspaceRoot, 'openspec', 'changes', 'archive', '2026-09-21-visual-workspace-extension', 'proposal.md');
     const artifact = new ArchiveArtifactItemElement('Proposal', filePath);
 
     assert.strictEqual(artifact.collapsibleState, vscode.TreeItemCollapsibleState.None);
@@ -50,9 +50,9 @@ describe('ArchiveTreeProvider & Elements', () => {
     assert.ok(rootChildren.length >= 1, 'Should have at least 1 archived item at root');
 
     const archiveItem = rootChildren.find(
-      (c) => c instanceof ArchiveItemElement && c.archive.name === '2026-09-21-visual-companion-extension'
+      (c) => c instanceof ArchiveItemElement && c.archive.name === '2026-09-21-visual-workspace-extension'
     ) as ArchiveItemElement;
-    assert.ok(archiveItem, 'Should find 2026-09-21-visual-companion-extension archive element');
+    assert.ok(archiveItem, 'Should find 2026-09-21-visual-workspace-extension archive element');
 
     const childArtifacts = (await provider.getChildren(archiveItem)) as any[];
     assert.ok(childArtifacts.length >= 1, 'Should find child artifacts for archived change');

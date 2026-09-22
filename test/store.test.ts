@@ -19,8 +19,8 @@ describe('OpenSpecStateStore', () => {
     assert.strictEqual(state.hasOpenSpecRoot, true);
     assert.ok(state.specs.length >= 3, 'Should detect at least 3 living capability specs');
 
-    const explorerSpec = state.specs.find((s) => s.capability === 'companion-explorer');
-    assert.ok(explorerSpec, 'Should detect companion-explorer spec');
+    const explorerSpec = state.specs.find((s) => s.capability === 'spec-explorer');
+    assert.ok(explorerSpec, 'Should detect spec-explorer spec');
     assert.ok(explorerSpec?.requirements.length >= 1);
 
     assert.ok(state.archive.length >= 1, 'Should detect at least 1 archived change');

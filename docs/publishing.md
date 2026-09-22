@@ -1,6 +1,6 @@
 # Visual Studio Code Marketplace Publishing Guide
 
-This document describes how to configure and trigger automated deployments of the OpenSpec Companion extension to the Visual Studio Code Marketplace using GitHub Actions.
+This document describes how to configure and trigger automated deployments of the OpenSpec extension for VS Code to the Visual Studio Code Marketplace using GitHub Actions.
 
 ---
 
@@ -22,7 +22,7 @@ Before publishing releases, you need:
 
 The release workflow requires access to the publisher PAT via GitHub Actions repository secrets:
 
-1. Navigate to your GitHub repository: `https://github.com/openspec/openspec-vscode-companion`
+1. Navigate to your GitHub repository: `https://github.com/openspec/openspec-vscode-extension`
 2. Go to **Settings** > **Secrets and variables** > **Actions**.
 3. Click **New repository secret**.
 4. Set:

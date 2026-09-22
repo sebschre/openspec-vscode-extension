@@ -2,7 +2,7 @@
 
 ## Context
 
-The repository is a TypeScript VS Code extension (`openspec-companion`) containing both the Node-based extension host (`src/`) and a Preact webview SPA (`webview-ui/`). Compilation and packaging are managed via `esbuild.config.js` and `@vscode/vsce` (v3.2.1).
+The repository is a TypeScript VS Code extension (`openspec-vscode`) containing both the Node-based extension host (`src/`) and a Preact webview SPA (`webview-ui/`). Compilation and packaging are managed via `esbuild.config.js` and `@vscode/vsce` (v3.2.1).
 
 Currently, no `.github/workflows` configurations exist. Releasing requires local developer authentication and manual packaging. See `proposal.md` for motivation.
 

@@ -2,7 +2,7 @@
 
 ## Context
 
-The OpenSpec VS Code companion extension features an interactive Webview panel (`SpecViewerPanel`) that renders active changes, living specs, and a creation form (`NewChangeForm.tsx`). Previously, submitting this form created an incomplete change stub containing only a partial `proposal.md` and a single dummy task, omitting delta specifications (`specs/<capability>/spec.md`) and technical design (`design.md`).
+The OpenSpec VS Code extension features an interactive Webview panel (`SpecViewerPanel`) that renders active changes, living specs, and a creation form (`NewChangeForm.tsx`). Previously, submitting this form created an incomplete change stub containing only a partial `proposal.md` and a single dummy task, omitting delta specifications (`specs/<capability>/spec.md`) and technical design (`design.md`).
 
 This design establishes an automated, multi-step generation pipeline within the extension that produces all four required schema artifacts, validates the change with the OpenSpec CLI, and updates the UI with real-time stepper feedback.
 

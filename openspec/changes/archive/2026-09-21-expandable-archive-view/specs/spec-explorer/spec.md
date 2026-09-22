@@ -1,4 +1,4 @@
-# Spec Delta: companion-explorer
+# Spec Delta: spec-explorer
 
 ## MODIFIED Requirements
 

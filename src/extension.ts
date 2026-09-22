@@ -38,7 +38,7 @@ export async function activate(context: vscode.ExtensionContext) {
     outputChannel.appendLine(`[OpenSpec] Error during initial scan: ${err}`);
   });
 
-  outputChannel.appendLine('[OpenSpec] OpenSpec Visual Companion Extension activated.');
+  outputChannel.appendLine('[OpenSpec] OpenSpec Extension activated.');
 }
 
 export function deactivate() {}

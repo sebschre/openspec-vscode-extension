@@ -20,7 +20,7 @@ Currently, clicking an item in the OpenSpec "Archive" view triggers VS Code's `v
 
 ### Modified Capabilities
 
-- `companion-explorer`: Update the Archived Changes View requirement and scenarios so that clicking an archived change expands its historical artifacts in-place within the current workspace rather than opening a new project folder.
+- `spec-explorer`: Update the Archived Changes View requirement and scenarios so that clicking an archived change expands its historical artifacts in-place within the current workspace rather than opening a new project folder.
 
 ## Impact
 
