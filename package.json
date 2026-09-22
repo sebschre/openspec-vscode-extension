@@ -94,6 +94,12 @@
         "title": "Archive Change",
         "category": "OpenSpec",
         "icon": "$(archive)"
+      },
+      {
+        "command": "openspec.revealArchiveInExplorer",
+        "title": "Reveal in File Explorer",
+        "category": "OpenSpec",
+        "icon": "$(folder-opened)"
       }
     ],
     "menus": {
@@ -124,6 +130,11 @@
           "command": "openspec.archive",
           "when": "viewItem == change",
           "group": "1_actions@2"
+        },
+        {
+          "command": "openspec.revealArchiveInExplorer",
+          "when": "viewItem == archiveItem || viewItem == archive",
+          "group": "navigation"
         }
       ]
     }
@@ -132,7 +143,7 @@
     "vscode:prepublish": "npm run build",
     "build": "node esbuild.config.js",
     "watch": "node esbuild.config.js --watch",
-    "test": "node -e \"require('esbuild').buildSync({ entryPoints: ['test/parser.test.ts', 'test/store.test.ts', 'test/cli.test.ts'], bundle: true, platform: 'node', format: 'cjs', outdir: 'dist-test' })\" && node --test dist-test/*.test.js",
+    "test": "node -e \"require('esbuild').buildSync({ entryPoints: ['test/parser.test.ts', 'test/store.test.ts', 'test/cli.test.ts', 'test/archive.test.ts'], bundle: true, platform: 'node', format: 'cjs', outdir: 'dist-test', alias: { vscode: './test/mockVscode.ts' } })\" && node --test dist-test/*.test.js",
     "typecheck": "tsc --noEmit",
     "package": "vsce package"
   },

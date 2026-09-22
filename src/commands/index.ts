@@ -163,4 +163,20 @@ export function registerCommands(
       }
     })
   );
+
+  // Command: Reveal Archive in Explorer
+  context.subscriptions.push(
+    vscode.commands.registerCommand('openspec.revealArchiveInExplorer', async (item?: any) => {
+      let targetPath: string | undefined;
+      if (typeof item === 'string') {
+        targetPath = item;
+      } else if (item?.archive?.path) {
+        targetPath = item.archive.path;
+      }
+
+      if (targetPath) {
+        await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(targetPath));
+      }
+    })
+  );
 }
