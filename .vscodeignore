@@ -12,3 +12,7 @@ node_modules/**
 openspec/**
 .agents/**
 dist-test/**
+.github/**
+docs/**
+*.vsix
+
