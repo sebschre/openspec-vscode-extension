@@ -7,6 +7,14 @@ import {
   inferChangeName,
   heuristicRefineMotivation,
   refineProposalMotivation,
+  heuristicGenerateProposal,
+  heuristicGenerateDeltaSpec,
+  heuristicGenerateDesign,
+  heuristicGenerateTasks,
+  generateProposalDoc,
+  generateDeltaSpecDoc,
+  generateDesignDoc,
+  generateTasksDoc,
 } from '../src/core/inference';
 
 
@@ -161,6 +169,86 @@ describe('Inference & Slugification', () => {
       const result = await refineProposalMotivation('need dark mode toggle');
       assert.strictEqual(result.isAi, false);
       assert.strictEqual(result.motivation, 'Need dark mode toggle.');
+    });
+  });
+
+  describe('Document Generators', () => {
+    describe('Proposal Generator', () => {
+      it('should generate valid proposal markdown via heuristic', () => {
+        const content = heuristicGenerateProposal('add-auth', 'Add GitHub OAuth login', 'auth-spec');
+        assert.ok(content.includes('# Proposal: add-auth'));
+        assert.ok(content.includes('## Why'));
+        assert.ok(content.includes('## What Changes'));
+        assert.ok(content.includes('## Capabilities'));
+        assert.ok(content.includes('`auth-spec`'));
+        assert.ok(content.includes('## Impact'));
+      });
+
+      it('should generate proposal via generateProposalDoc fallback', async () => {
+        (vscode.lm as any).selectChatModels = async () => [];
+        const result = await generateProposalDoc('add-auth', 'Add GitHub OAuth login', 'auth-spec');
+        assert.strictEqual(result.isAi, false);
+        assert.ok(result.content.includes('# Proposal: add-auth'));
+      });
+    });
+
+    describe('Delta Spec Generator', () => {
+      it('should generate valid spec delta markdown with 50+ char purpose and scenario keywords', () => {
+        const content = heuristicGenerateDeltaSpec('auth-spec', 'GitHub OAuth authentication and token verification');
+        assert.ok(content.includes('# Spec Delta: auth-spec'));
+        assert.ok(content.includes('## Purpose'));
+        const purposeMatch = content.match(/## Purpose\s*\n+([\s\S]*?)(?=\n##)/);
+        assert.ok(purposeMatch && purposeMatch[1].trim().length >= 50, 'Purpose must be at least 50 chars');
+        assert.ok(content.includes('## ADDED Requirements'));
+        assert.ok(content.includes('### Requirement:'));
+        assert.ok(content.includes('The system SHALL'));
+        assert.ok(content.includes('#### Scenario:'));
+        assert.ok(content.includes('- **WHEN**'));
+        assert.ok(content.includes('- **THEN**'));
+      });
+
+      it('should generate delta spec via generateDeltaSpecDoc fallback', async () => {
+        (vscode.lm as any).selectChatModels = async () => [];
+        const result = await generateDeltaSpecDoc('auth-spec', 'OAuth authentication');
+        assert.strictEqual(result.isAi, false);
+        assert.ok(result.content.includes('# Spec Delta: auth-spec'));
+        assert.ok(result.content.includes('#### Scenario:'));
+      });
+    });
+
+    describe('Design Generator', () => {
+      it('should generate valid design markdown with required sections', () => {
+        const content = heuristicGenerateDesign('add-auth', 'GitHub OAuth authentication', 'auth-spec');
+        assert.ok(content.includes('# Design: add-auth'));
+        assert.ok(content.includes('## Context'));
+        assert.ok(content.includes('## Goals / Non-Goals'));
+        assert.ok(content.includes('## Decisions'));
+        assert.ok(content.includes('## Risks / Trade-offs'));
+      });
+
+      it('should generate design via generateDesignDoc fallback', async () => {
+        (vscode.lm as any).selectChatModels = async () => [];
+        const result = await generateDesignDoc('add-auth', 'GitHub OAuth', 'auth-spec');
+        assert.strictEqual(result.isAi, false);
+        assert.ok(result.content.includes('# Design: add-auth'));
+      });
+    });
+
+    describe('Tasks Generator', () => {
+      it('should generate valid tasks markdown with numbered groups and checkboxes', () => {
+        const content = heuristicGenerateTasks('add-auth', 'GitHub OAuth authentication', 'auth-spec');
+        assert.ok(content.includes('# Tasks: add-auth'));
+        assert.ok(content.includes('## 1.'));
+        assert.ok(content.includes('- [ ] 1.1'));
+      });
+
+      it('should generate tasks via generateTasksDoc fallback', async () => {
+        (vscode.lm as any).selectChatModels = async () => [];
+        const result = await generateTasksDoc('add-auth', 'GitHub OAuth', 'auth-spec');
+        assert.strictEqual(result.isAi, false);
+        assert.ok(result.content.includes('# Tasks: add-auth'));
+        assert.ok(result.content.includes('- [ ] 1.1'));
+      });
     });
   });
 });

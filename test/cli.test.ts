@@ -18,7 +18,7 @@ describe('OpenSpecCliBridge', () => {
       const version = await bridge.getVersion();
       assert.ok(version && version.length > 0, `Expected version string, got ${version}`);
 
-      const validateRes = await bridge.validate();
+      const validateRes = await bridge.validate('visual-spec-viewer');
       assert.strictEqual(validateRes.success, true);
     } else {
       const isAvailable = await bridge.isCliAvailable();

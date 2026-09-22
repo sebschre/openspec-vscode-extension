@@ -9,6 +9,10 @@ import {
   heuristicSlugify,
   refineProposalMotivation,
   heuristicRefineMotivation,
+  generateProposalDoc,
+  generateDeltaSpecDoc,
+  generateDesignDoc,
+  generateTasksDoc,
 } from '../../core/inference';
 
 
@@ -262,10 +266,9 @@ export class SpecViewerPanel {
         break;
       }
       case 'SUBMIT_NEW_CHANGE': {
-        const { name, description, motivation, schema } = message;
+        const { name, description, schema } = message;
         const trimmedName = (name || '').trim();
         const trimmedDesc = (description || '').trim();
-        const trimmedMotivation = (motivation || '').trim() || trimmedDesc;
         const selectedSchema = schema || 'spec-driven';
 
         if (!trimmedName || !/^[a-z0-9-]+$/.test(trimmedName)) {
@@ -290,6 +293,16 @@ export class SpecViewerPanel {
           const isCliAvailable = await this._cli.isCliAvailable();
           let created = false;
 
+          // Step 1: Scaffolding
+          this.postMessage({
+            type: 'GENERATION_PROGRESS',
+            progress: {
+              step: 'scaffolding',
+              status: 'active',
+              message: 'Scaffolding change directory...',
+            },
+          });
+
           if (isCliAvailable) {
             const res = await this._cli.newChange(trimmedName, selectedSchema, trimmedDesc);
             if (res.success) {
@@ -299,37 +312,137 @@ export class SpecViewerPanel {
 
           const changeDir = path.join(state.rootPath, 'openspec', 'changes', trimmedName);
           const proposalPath = path.join(changeDir, 'proposal.md');
+          const designPath = path.join(changeDir, 'design.md');
           const tasksPath = path.join(changeDir, 'tasks.md');
           const yamlPath = path.join(changeDir, '.openspec.yaml');
 
           if (!created) {
-            // Direct filesystem scaffolding fallback
             fs.mkdirSync(changeDir, { recursive: true });
             fs.writeFileSync(yamlPath, `schema: ${selectedSchema}\n`, 'utf8');
-
-            const whySection = trimmedMotivation ? `\n\n${trimmedMotivation}` : '';
-            const whatSection = trimmedDesc ? `\n\n${trimmedDesc}` : '';
-            const proposalContent = `# Proposal: ${trimmedName}\n\n## Why${whySection}\n\n## What Changes${whatSection}\n\n## Capabilities\n\n### New Capabilities\n\n### Modified Capabilities\n\n## Impact\n`;
-            fs.writeFileSync(proposalPath, proposalContent, 'utf8');
-
-            const tasksContent = `# Tasks\n\n## 1. Implementation\n\n- [ ] 1.1 Initial setup\n`;
-            fs.writeFileSync(tasksPath, tasksContent, 'utf8');
-          } else if (trimmedMotivation || trimmedDesc) {
-            // Ensure proposal.md contains the refined motivation in ## Why and description in ## What Changes
-            if (fs.existsSync(proposalPath)) {
-              let content = fs.readFileSync(proposalPath, 'utf8');
-              if (trimmedMotivation) {
-                content = content.replace(/## Why\s*(\n+[\s\S]*?)?(?=\n## What Changes|\n## Capabilities|$)/, `## Why\n\n${trimmedMotivation}\n\n`);
-              }
-              if (trimmedDesc && !content.includes(trimmedDesc)) {
-                content = content.replace(/## What Changes\s*(\n+[\s\S]*?)?(?=\n## Capabilities|$)/, `## What Changes\n\n${trimmedDesc}\n\n`);
-              }
-              fs.writeFileSync(proposalPath, content, 'utf8');
-            } else {
-              const proposalContent = `# Proposal: ${trimmedName}\n\n## Why\n\n${trimmedMotivation}\n\n## What Changes\n\n${trimmedDesc}\n\n## Capabilities\n\n### New Capabilities\n\n### Modified Capabilities\n\n## Impact\n`;
-              fs.writeFileSync(proposalPath, proposalContent, 'utf8');
-            }
           }
+
+          this.postMessage({
+            type: 'GENERATION_PROGRESS',
+            progress: {
+              step: 'scaffolding',
+              status: 'completed',
+              message: 'Scaffolded change directory',
+            },
+          });
+
+          // Step 2: Proposal
+          this.postMessage({
+            type: 'GENERATION_PROGRESS',
+            progress: {
+              step: 'proposal',
+              status: 'active',
+              message: 'Generating proposal document (proposal.md)...',
+            },
+          });
+
+          const proposalResult = await generateProposalDoc(trimmedName, trimmedDesc, trimmedName);
+          fs.writeFileSync(proposalPath, proposalResult.content, 'utf8');
+
+          this.postMessage({
+            type: 'GENERATION_PROGRESS',
+            progress: {
+              step: 'proposal',
+              status: 'completed',
+              message: 'Generated proposal.md',
+            },
+          });
+
+          // Step 3: Delta Specs
+          this.postMessage({
+            type: 'GENERATION_PROGRESS',
+            progress: {
+              step: 'specs',
+              status: 'active',
+              message: `Authoring delta specification (specs/${trimmedName}/spec.md)...`,
+            },
+          });
+
+          const specDir = path.join(changeDir, 'specs', trimmedName);
+          fs.mkdirSync(specDir, { recursive: true });
+          const specPath = path.join(specDir, 'spec.md');
+          const specResult = await generateDeltaSpecDoc(trimmedName, trimmedDesc);
+          fs.writeFileSync(specPath, specResult.content, 'utf8');
+
+          this.postMessage({
+            type: 'GENERATION_PROGRESS',
+            progress: {
+              step: 'specs',
+              status: 'completed',
+              message: `Generated specs/${trimmedName}/spec.md`,
+            },
+          });
+
+          // Step 4: Technical Design
+          this.postMessage({
+            type: 'GENERATION_PROGRESS',
+            progress: {
+              step: 'design',
+              status: 'active',
+              message: 'Synthesizing technical design (design.md)...',
+            },
+          });
+
+          const designResult = await generateDesignDoc(trimmedName, trimmedDesc, trimmedName);
+          fs.writeFileSync(designPath, designResult.content, 'utf8');
+
+          this.postMessage({
+            type: 'GENERATION_PROGRESS',
+            progress: {
+              step: 'design',
+              status: 'completed',
+              message: 'Generated design.md',
+            },
+          });
+
+          // Step 5: Implementation Tasks
+          this.postMessage({
+            type: 'GENERATION_PROGRESS',
+            progress: {
+              step: 'tasks',
+              status: 'active',
+              message: 'Formulating task checklist (tasks.md)...',
+            },
+          });
+
+          const tasksResult = await generateTasksDoc(trimmedName, trimmedDesc, trimmedName);
+          fs.writeFileSync(tasksPath, tasksResult.content, 'utf8');
+
+          this.postMessage({
+            type: 'GENERATION_PROGRESS',
+            progress: {
+              step: 'tasks',
+              status: 'completed',
+              message: 'Generated tasks.md',
+            },
+          });
+
+          // Step 6: Validation
+          this.postMessage({
+            type: 'GENERATION_PROGRESS',
+            progress: {
+              step: 'validating',
+              status: 'active',
+              message: 'Validating OpenSpec schema and artifacts...',
+            },
+          });
+
+          if (isCliAvailable) {
+            await this._cli.validate(trimmedName);
+          }
+
+          this.postMessage({
+            type: 'GENERATION_PROGRESS',
+            progress: {
+              step: 'validating',
+              status: 'completed',
+              message: 'Specification validated successfully',
+            },
+          });
 
           await this._store.refresh();
 
@@ -340,7 +453,7 @@ export class SpecViewerPanel {
           SpecViewerPanel.currentPanels.set(trimmedName, this);
           this.updateChange(trimmedName);
 
-          vscode.window.showInformationMessage(`Created OpenSpec change '${trimmedName}'`);
+          vscode.window.showInformationMessage(`Created OpenSpec change '${trimmedName}' with full specification suite.`);
         } catch (err: any) {
           this.postMessage({
             type: 'CHANGE_CREATION_ERROR',

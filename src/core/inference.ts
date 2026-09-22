@@ -229,3 +229,332 @@ export async function refineProposalMotivation(
   };
 }
 
+export interface GeneratedDocumentResult {
+  content: string;
+  isAi: boolean;
+}
+
+export function heuristicGenerateProposal(
+  changeName: string,
+  description: string,
+  capabilityName?: string
+): string {
+  const cap = capabilityName || changeName;
+  const whyText = heuristicRefineMotivation(description);
+  const desc = description.trim() || changeName;
+
+  return `# Proposal: ${changeName}
+
+## Why
+
+${whyText}
+
+## What Changes
+
+- Implement ${desc} to satisfy required system capabilities.
+- Introduce structured interfaces, configurations, and verification routines.
+
+## Capabilities
+
+### New Capabilities
+- \`${cap}\`: Provides ${desc} capability for the workspace.
+
+### Modified Capabilities
+
+## Impact
+
+- Enhances functionality with zero breaking changes to existing public APIs or interfaces.
+`;
+}
+
+export function heuristicGenerateDeltaSpec(
+  capabilityName: string,
+  description: string
+): string {
+  const cap = capabilityName || 'core-feature';
+  const desc = description.trim() || 'core functionality';
+  const title = cap
+    .split('-')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+
+  return `# Spec Delta: ${cap}
+
+## Purpose
+
+Provides comprehensive ${desc} capabilities and guarantees observable behavior within the system.
+
+## ADDED Requirements
+
+### Requirement: ${title} Execution
+The system SHALL support and execute ${desc} in accordance with project standards.
+
+#### Scenario: Primary operational execution
+- **WHEN** the user invokes or triggers ${desc}
+- **THEN** the system executes the requested operation successfully and returns expected results
+`;
+}
+
+export function heuristicGenerateDesign(
+  changeName: string,
+  description: string,
+  capabilityName?: string
+): string {
+  const cap = capabilityName || changeName;
+  const desc = description.trim() || changeName;
+
+  return `# Design: ${changeName}
+
+## Context
+
+See proposal.md - Why. This design describes the architectural structure and technical approach for implementing ${desc}.
+
+## Goals / Non-Goals
+
+**Goals:**
+- Provide a reliable, testable implementation for \`${cap}\`.
+- Ensure schema compliance and robust error handling.
+
+**Non-Goals:**
+- Unrelated structural refactoring outside the scope of \`${cap}\`.
+
+## Decisions
+
+### Decision 1: Modular Implementation Strategy
+Implement ${desc} using modular components and pure function interfaces where possible to facilitate unit testing and observability.
+- **Rationale**: Keeps execution paths isolated and testable.
+- **Alternatives Considered**: In-line monolithic handlers.
+
+## Risks / Trade-offs
+
+- **[Risk] Unexpected edge case inputs** → *Mitigation*: Comprehensive scenario validation and defensive parameter checking.
+`;
+}
+
+export function heuristicGenerateTasks(
+  changeName: string,
+  description: string,
+  capabilityName?: string
+): string {
+  const cap = capabilityName || changeName;
+  const desc = description.trim() || changeName;
+
+  return `# Tasks: ${changeName}
+
+## 1. Setup & Scaffolding
+
+- [ ] 1.1 Scaffold module structure and dependencies for \`${cap}\`, verifying directory setup succeeds
+
+## 2. Core Implementation
+
+- [ ] 2.1 Implement primary functionality for ${desc}, verifying core logic execution
+
+## 3. Verification & Testing
+
+- [ ] 3.1 Write automated unit and integration tests for \`${cap}\`, verifying all test assertions pass
+`;
+}
+
+async function runLmPrompt(
+  systemPrompt: string,
+  timeoutMs: number = 4000,
+  token?: vscode.CancellationToken
+): Promise<string | null> {
+  if (!vscode.lm || typeof vscode.lm.selectChatModels !== 'function') {
+    return null;
+  }
+  try {
+    const models = await vscode.lm.selectChatModels();
+    if (!models || models.length === 0) return null;
+
+    const model = models[0];
+    const messages = [vscode.LanguageModelChatMessage.User(systemPrompt)];
+
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('LM timed out')), timeoutMs)
+    );
+
+    const requestPromise = (async () => {
+      const response = await model.sendRequest(messages, {}, token);
+      let text = '';
+      for await (const chunk of response.text) {
+        text += chunk;
+      }
+      return text;
+    })();
+
+    const raw = await Promise.race([requestPromise, timeoutPromise]);
+    return (raw || '').replace(/^```[a-z]*\n?/gi, '').replace(/\n?```$/gi, '').trim();
+  } catch {
+    return null;
+  }
+}
+
+export async function generateProposalDoc(
+  changeName: string,
+  description: string,
+  capabilityName?: string,
+  token?: vscode.CancellationToken
+): Promise<GeneratedDocumentResult> {
+  const cap = capabilityName || changeName;
+  const prompt = `You are a software architect drafting an OpenSpec proposal.md for a change named "${changeName}".
+Developer description: "${description}"
+Capability slug: "${cap}"
+
+Output ONLY a valid markdown document conforming to this exact template:
+# Proposal: ${changeName}
+
+## Why
+[1-2 paragraphs on problem and motivation]
+
+## What Changes
+- [bullet point of change]
+- [bullet point of change]
+
+## Capabilities
+
+### New Capabilities
+- \`${cap}\`: [brief description of what capability covers]
+
+### Modified Capabilities
+
+## Impact
+[Affected code, APIs, dependencies]`;
+
+  const lmResult = await runLmPrompt(prompt, 4000, token);
+  if (
+    lmResult &&
+    lmResult.includes('## Why') &&
+    lmResult.includes('## What Changes') &&
+    lmResult.includes('## Capabilities') &&
+    lmResult.includes('## Impact')
+  ) {
+    return { content: lmResult, isAi: true };
+  }
+
+  return {
+    content: heuristicGenerateProposal(changeName, description, cap),
+    isAi: false,
+  };
+}
+
+export async function generateDeltaSpecDoc(
+  capabilityName: string,
+  description: string,
+  token?: vscode.CancellationToken
+): Promise<GeneratedDocumentResult> {
+  const prompt = `You are a software specifications engineer writing an OpenSpec delta spec (spec.md) for capability "${capabilityName}".
+Description: "${description}"
+
+Rules:
+1. The first section MUST be "## Purpose" containing 1-2 complete sentences (at least 50 characters).
+2. Follow with "## ADDED Requirements".
+3. Each requirement MUST start with "### Requirement: <Name>" and use normative SHALL or MUST language.
+4. Each scenario MUST use exactly 4 hashtags "#### Scenario: <Name>".
+5. Each scenario MUST contain bullet points: "- **WHEN** <condition>" and "- **THEN** <expected result>".
+
+Output ONLY the markdown spec document.`;
+
+  const lmResult = await runLmPrompt(prompt, 4000, token);
+  if (
+    lmResult &&
+    lmResult.includes('## Purpose') &&
+    lmResult.includes('## ADDED Requirements') &&
+    lmResult.includes('### Requirement:') &&
+    lmResult.includes('#### Scenario:') &&
+    lmResult.includes('**WHEN**') &&
+    lmResult.includes('**THEN**')
+  ) {
+    return { content: lmResult, isAi: true };
+  }
+
+  return {
+    content: heuristicGenerateDeltaSpec(capabilityName, description),
+    isAi: false,
+  };
+}
+
+export async function generateDesignDoc(
+  changeName: string,
+  description: string,
+  capabilityName?: string,
+  token?: vscode.CancellationToken
+): Promise<GeneratedDocumentResult> {
+  const cap = capabilityName || changeName;
+  const prompt = `You are a software architect drafting an OpenSpec design.md document for change "${changeName}".
+Description: "${description}"
+Capability: "${cap}"
+
+Must include:
+# Design: ${changeName}
+
+## Context
+See proposal.md - Why. [Brief technical context]
+
+## Goals / Non-Goals
+**Goals:**
+- [Goal 1]
+
+**Non-Goals:**
+- [Non-goal 1]
+
+## Decisions
+### Decision 1: [Title]
+[Rationale and alternatives considered]
+
+## Risks / Trade-offs
+- **[Risk]** [description] → *Mitigation*: [mitigation]
+
+Output ONLY the markdown design document.`;
+
+  const lmResult = await runLmPrompt(prompt, 4000, token);
+  if (
+    lmResult &&
+    lmResult.includes('## Context') &&
+    lmResult.includes('## Goals / Non-Goals') &&
+    lmResult.includes('## Decisions') &&
+    lmResult.includes('## Risks / Trade-offs')
+  ) {
+    return { content: lmResult, isAi: true };
+  }
+
+  return {
+    content: heuristicGenerateDesign(changeName, description, cap),
+    isAi: false,
+  };
+}
+
+export async function generateTasksDoc(
+  changeName: string,
+  description: string,
+  capabilityName?: string,
+  token?: vscode.CancellationToken
+): Promise<GeneratedDocumentResult> {
+  const cap = capabilityName || changeName;
+  const prompt = `You are a technical project lead breaking down an OpenSpec change into tasks.md for "${changeName}".
+Description: "${description}"
+Capability: "${cap}"
+
+Format Rules:
+1. Header "# Tasks: ${changeName}"
+2. Numbered groups: "## 1. Setup & Scaffolding", "## 2. Implementation", "## 3. Verification"
+3. Checkboxes MUST follow "- [ ] X.Y <description with verification criterion>"
+
+Output ONLY the markdown tasks document.`;
+
+  const lmResult = await runLmPrompt(prompt, 4000, token);
+  if (
+    lmResult &&
+    lmResult.includes('## 1.') &&
+    lmResult.includes('- [ ] 1.1')
+  ) {
+    return { content: lmResult, isAi: true };
+  }
+
+  return {
+    content: heuristicGenerateTasks(changeName, description, cap),
+    isAi: false,
+  };
+}
+
+

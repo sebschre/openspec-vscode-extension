@@ -2,7 +2,13 @@ import { describe, it, after } from 'node:test';
 import assert from 'node:assert';
 import * as fs from 'fs';
 import * as path from 'path';
-import { inferChangeName } from '../src/core/inference';
+import {
+  inferChangeName,
+  generateProposalDoc,
+  generateDeltaSpecDoc,
+  generateDesignDoc,
+  generateTasksDoc,
+} from '../src/core/inference';
 import { OpenSpecStateStore } from '../src/core/store';
 import { OpenSpecCliBridge } from '../src/core/cli';
 
@@ -85,6 +91,65 @@ describe('AI-Guided Change Creation End-to-End Workflow', () => {
 
     assert.ok(proposalContent.includes(`## Why\n\n${refinedMotivation}`));
     assert.ok(proposalContent.includes(`## What Changes\n\n${rawNotes}`));
+  });
+
+  it('should generate full specification suite (proposal, delta spec, design, tasks) and pass validation', async () => {
+    const fullChangeName = 'test-e2e-full-specs';
+    const fullChangeDir = path.join(workspaceRoot, 'openspec', 'changes', fullChangeName);
+    const cli = new OpenSpecCliBridge(workspaceRoot);
+    const store = new OpenSpecStateStore(workspaceRoot);
+
+    try {
+      const isCli = await cli.isCliAvailable();
+      if (isCli) {
+        await cli.newChange(fullChangeName, 'spec-driven', testDescription);
+      } else {
+        fs.mkdirSync(fullChangeDir, { recursive: true });
+        fs.writeFileSync(path.join(fullChangeDir, '.openspec.yaml'), 'schema: spec-driven\n', 'utf8');
+      }
+
+      // Generate all 4 docs
+      const proposal = await generateProposalDoc(fullChangeName, testDescription, fullChangeName);
+      fs.writeFileSync(path.join(fullChangeDir, 'proposal.md'), proposal.content, 'utf8');
+
+      const specDir = path.join(fullChangeDir, 'specs', fullChangeName);
+      fs.mkdirSync(specDir, { recursive: true });
+      const spec = await generateDeltaSpecDoc(fullChangeName, testDescription);
+      fs.writeFileSync(path.join(specDir, 'spec.md'), spec.content, 'utf8');
+
+      const design = await generateDesignDoc(fullChangeName, testDescription, fullChangeName);
+      fs.writeFileSync(path.join(fullChangeDir, 'design.md'), design.content, 'utf8');
+
+      const tasks = await generateTasksDoc(fullChangeName, testDescription, fullChangeName);
+      fs.writeFileSync(path.join(fullChangeDir, 'tasks.md'), tasks.content, 'utf8');
+
+      // Verify all 4 files exist
+      assert.ok(fs.existsSync(path.join(fullChangeDir, 'proposal.md')), 'proposal.md must exist');
+      assert.ok(fs.existsSync(path.join(specDir, 'spec.md')), 'spec.md must exist');
+      assert.ok(fs.existsSync(path.join(fullChangeDir, 'design.md')), 'design.md must exist');
+      assert.ok(fs.existsSync(path.join(fullChangeDir, 'tasks.md')), 'tasks.md must exist');
+
+      // Refresh store and verify
+      await store.refresh();
+      const change = store.getChange(fullChangeName);
+      assert.ok(change, 'Store should find change');
+      assert.strictEqual(change?.artifactsPresent.proposal, true);
+      assert.strictEqual(change?.artifactsPresent.specs, true);
+      assert.strictEqual(change?.artifactsPresent.design, true);
+      assert.strictEqual(change?.artifactsPresent.tasks, true);
+      assert.strictEqual(change?.specs.length, 1);
+      assert.strictEqual(change?.specs[0].capability, fullChangeName);
+
+      // Validate with CLI if available
+      if (isCli) {
+        const valRes = await cli.validate(fullChangeName);
+        assert.strictEqual(valRes.success, true, `Validation failed: ${valRes.stderr || valRes.stdout}`);
+      }
+    } finally {
+      if (fs.existsSync(fullChangeDir)) {
+        fs.rmSync(fullChangeDir, { recursive: true, force: true });
+      }
+    }
   });
 });
 
