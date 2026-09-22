@@ -1,0 +1,153 @@
+{
+  "name": "openspec-companion",
+  "displayName": "OpenSpec Companion",
+  "description": "Visual companion for OpenSpec — inspect and steer living specs, active changes, and AI agent runs directly in VS Code.",
+  "version": "0.1.0",
+  "publisher": "openspec",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openspec/openspec-vscode-companion"
+  },
+  "engines": {
+    "vscode": "^1.84.0"
+  },
+  "categories": [
+    "AI",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "openspec",
+    "spec-driven",
+    "specs",
+    "ai",
+    "claude",
+    "copilot",
+    "gemini",
+    "antigravity"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "openspec",
+          "title": "OpenSpec",
+          "icon": "$(book)"
+        }
+      ]
+    },
+    "views": {
+      "openspec": [
+        {
+          "id": "openspec.views.changes",
+          "name": "Active Changes"
+        },
+        {
+          "id": "openspec.views.specs",
+          "name": "Living Specs"
+        },
+        {
+          "id": "openspec.views.archive",
+          "name": "Archive",
+          "visibility": "collapsed"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "openspec.newChange",
+        "title": "New Change",
+        "category": "OpenSpec",
+        "icon": "$(plus)"
+      },
+      {
+        "command": "openspec.refresh",
+        "title": "Refresh Specs & Changes",
+        "category": "OpenSpec",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "openspec.openViewer",
+        "title": "Open Visual Spec Viewer",
+        "category": "OpenSpec",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "openspec.validate",
+        "title": "Validate Change",
+        "category": "OpenSpec",
+        "icon": "$(check)"
+      },
+      {
+        "command": "openspec.syncSpecs",
+        "title": "Sync Specs to Main",
+        "category": "OpenSpec",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "openspec.archive",
+        "title": "Archive Change",
+        "category": "OpenSpec",
+        "icon": "$(archive)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "openspec.refresh",
+          "when": "view =~ /^openspec\\.views\\./",
+          "group": "navigation@1"
+        },
+        {
+          "command": "openspec.newChange",
+          "when": "view == openspec.views.changes",
+          "group": "navigation@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "openspec.openViewer",
+          "when": "viewItem == change || viewItem == spec",
+          "group": "inline"
+        },
+        {
+          "command": "openspec.validate",
+          "when": "viewItem == change",
+          "group": "1_actions@1"
+        },
+        {
+          "command": "openspec.archive",
+          "when": "viewItem == change",
+          "group": "1_actions@2"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.config.js",
+    "watch": "node esbuild.config.js --watch",
+    "test": "node -e \"require('esbuild').buildSync({ entryPoints: ['test/parser.test.ts', 'test/store.test.ts', 'test/cli.test.ts'], bundle: true, platform: 'node', format: 'cjs', outdir: 'dist-test' })\" && node --test dist-test/*.test.js",
+    "typecheck": "tsc --noEmit",
+    "package": "vsce package"
+  },
+  "dependencies": {
+    "@preact/signals": "^2.0.1",
+    "@vscode/codicons": "^0.0.36",
+    "js-yaml": "^4.1.0",
+    "preact": "^10.25.4"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.17.0",
+    "@types/vscode": "^1.84.0",
+    "@vscode/vsce": "^3.2.1",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.3"
+  }
+}
