@@ -8,13 +8,14 @@ import { RequirementCard } from './components/RequirementCard';
 import { LiveTaskList } from './components/LiveTaskList';
 import { NewChangeForm } from './components/NewChangeForm';
 import { LivingSpecViewer } from './components/LivingSpecViewer';
+import { DesignViewer } from './components/DesignViewer';
 
 export function App() {
   const [change, setChange] = useState<ChangeDetail | null>(null);
   const [livingSpec, setLivingSpec] = useState<SpecDetail | null>(null);
   const [isNewChangeMode, setIsNewChangeMode] = useState<boolean>(false);
   const [availableSchemas, setAvailableSchemas] = useState<string[]>(['spec-driven']);
-  const [activeTab, setActiveTab] = useState<'overview' | 'specs' | 'tasks'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'specs' | 'design' | 'tasks'>('overview');
   const vscode = getVsCodeApi();
 
   useEffect(() => {
@@ -90,7 +91,7 @@ export function App() {
             fontWeight: activeTab === 'overview' ? '600' : '400',
           }}
         >
-          Overview & Decisions
+          Proposal (Overview)
         </button>
 
         <button
@@ -107,6 +108,22 @@ export function App() {
           }}
         >
           Delta Specs ({change.specs.reduce((acc: number, s: SpecDetail) => acc + s.requirements.length, 0)} reqs)
+        </button>
+
+        <button
+          onClick={() => setActiveTab('design')}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: 'transparent',
+            border: 'none',
+            borderBottom: activeTab === 'design' ? '2px solid var(--accent)' : '2px solid transparent',
+            color: activeTab === 'design' ? 'var(--fg)' : 'rgba(255, 255, 255, 0.6)',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: activeTab === 'design' ? '600' : '400',
+          }}
+        >
+          Technical Design {change.design?.decisions.length ? `(${change.design.decisions.length} decisions)` : ''}
         </button>
 
         <button
@@ -157,6 +174,8 @@ export function App() {
           )}
         </div>
       )}
+
+      {activeTab === 'design' && <DesignViewer change={change} />}
 
       {activeTab === 'tasks' && <LiveTaskList change={change} />}
     </div>

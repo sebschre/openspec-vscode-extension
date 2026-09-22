@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'preact/hooks';
-import { ChangeDetail, DesignDecision } from '../../../src/core/types';
+import { ChangeDetail } from '../../../src/core/types';
 import { ExtensionToWebviewMessage } from '../../../src/protocol/messages';
 import { getVsCodeApi } from '../vscode';
 
@@ -318,65 +318,6 @@ export function ChangeOverview({ change }: ChangeOverviewProps) {
             {change.proposal.whatChanges.map((changeItem: string, idx: number) => (
               <li key={idx} style={{ fontSize: '13px', lineHeight: '1.5' }}>
                 {changeItem}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Architectural Decisions */}
-      {change.design?.decisions && change.design.decisions.length > 0 && (
-        <div
-          style={{
-            padding: '20px',
-            backgroundColor: 'var(--card-bg)',
-            borderRadius: '8px',
-            border: '1px solid var(--card-border)',
-          }}
-        >
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600' }}>
-            Architectural Decisions
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {change.design.decisions.map((dec: DesignDecision, idx: number) => (
-              <div
-                key={idx}
-                style={{
-                  padding: '12px 14px',
-                  backgroundColor: 'rgba(0, 0, 0, 0.15)',
-                  borderRadius: '6px',
-                  border: '1px solid var(--card-border)',
-                }}
-              >
-                <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '6px' }}>
-                  {dec.title}
-                </div>
-                <div style={{ fontSize: '13px', opacity: 0.9, lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
-                  {dec.rationale}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Risks & Mitigations */}
-      {change.design?.risks && change.design.risks.length > 0 && (
-        <div
-          style={{
-            padding: '20px',
-            backgroundColor: 'var(--card-bg)',
-            borderRadius: '8px',
-            border: '1px solid var(--card-border)',
-          }}
-        >
-          <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: '600' }}>
-            Risks & Mitigations
-          </h3>
-          <ul style={{ margin: 0, paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {change.design.risks.map((risk: string, idx: number) => (
-              <li key={idx} style={{ fontSize: '13px', lineHeight: '1.5' }}>
-                {risk}
               </li>
             ))}
           </ul>

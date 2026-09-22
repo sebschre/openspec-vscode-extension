@@ -21,10 +21,10 @@ export function PipelineRail({ change, activeTab, onSelectTab }: PipelineRailPro
       isActive: activeTab === 'specs',
     },
     {
-      id: 'overview',
+      id: 'design',
       label: '3. Design',
       isComplete: change.artifactsPresent.design,
-      isActive: false,
+      isActive: activeTab === 'design',
     },
     {
       id: 'tasks',
