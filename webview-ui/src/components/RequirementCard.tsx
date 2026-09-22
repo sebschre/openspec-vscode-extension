@@ -1,5 +1,6 @@
 import { RequirementItem, ScenarioItem } from '../../../src/core/types';
 import { ScenarioBlock } from './ScenarioBlock';
+import { renderHighlightedText } from './LivingSpecViewer';
 
 interface RequirementCardProps {
   req: RequirementItem;
@@ -52,7 +53,7 @@ export function RequirementCard({ req }: RequirementCardProps) {
 
       {req.description && (
         <div style={{ fontSize: '13px', color: 'var(--fg)', opacity: 0.9, marginBottom: '12px', whiteSpace: 'pre-wrap' }}>
-          {req.description}
+          {renderHighlightedText(req.description)}
         </div>
       )}
 

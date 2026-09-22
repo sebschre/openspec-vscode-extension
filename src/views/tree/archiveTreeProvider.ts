@@ -2,7 +2,35 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { OpenSpecStateStore } from '../../core/store';
-import { ArchiveItem } from '../../core/types';
+import { OpenSpecParser } from '../../core/parser';
+import { ArchiveItem, SpecDetail } from '../../core/types';
+
+export class ArchiveSpecItemElement extends vscode.TreeItem {
+  public readonly filePath: string;
+
+  constructor(
+    public readonly spec: SpecDetail,
+    public readonly labelText: string,
+    public readonly archiveName: string
+  ) {
+    super(labelText, vscode.TreeItemCollapsibleState.None);
+    this.filePath = spec.filePath;
+
+    const reqCount = spec.requirements.length;
+    this.description = `[Archived] • ${reqCount} req${reqCount === 1 ? '' : 's'}`;
+    this.tooltip = `[Archived Spec] Capability: ${spec.capability}\n${
+      spec.purpose ? `Purpose: ${spec.purpose}\n` : ''
+    }${reqCount} requirement${reqCount === 1 ? '' : 's'}\nArchived Change: ${archiveName}\nLocation: ${spec.filePath}`;
+    this.iconPath = new vscode.ThemeIcon('book', new vscode.ThemeColor('charts.purple'));
+    this.contextValue = 'archiveSpec';
+
+    this.command = {
+      command: 'openspec.openViewer',
+      title: 'Open Spec',
+      arguments: [this],
+    };
+  }
+}
 
 export class ArchiveItemElement extends vscode.TreeItem {
   constructor(public readonly archive: ArchiveItem) {
@@ -43,7 +71,11 @@ export class ArchiveArtifactItemElement extends vscode.TreeItem {
   }
 }
 
-export type ArchiveTreeElement = ArchiveItemElement | ArchiveArtifactItemElement | vscode.TreeItem;
+export type ArchiveTreeElement =
+  | ArchiveItemElement
+  | ArchiveArtifactItemElement
+  | ArchiveSpecItemElement
+  | vscode.TreeItem;
 
 export class ArchiveTreeProvider implements vscode.TreeDataProvider<ArchiveTreeElement> {
   private _onDidChangeTreeData: vscode.EventEmitter<ArchiveTreeElement | undefined | void> =
@@ -83,7 +115,7 @@ export class ArchiveTreeProvider implements vscode.TreeDataProvider<ArchiveTreeE
         return [missing];
       }
 
-      const children: ArchiveArtifactItemElement[] = [];
+      const children: (ArchiveArtifactItemElement | ArchiveSpecItemElement)[] = [];
 
       // Check Proposal
       const proposalPath = path.join(archiveDir, 'proposal.md');
@@ -96,10 +128,31 @@ export class ArchiveTreeProvider implements vscode.TreeDataProvider<ArchiveTreeE
       if (fs.existsSync(specsDir)) {
         const specFiles = this.findSpecFiles(specsDir);
         for (const sf of specFiles) {
+          let spec = element.archive.specs?.find(
+            (s) => s.filePath === sf.filePath || s.capability === sf.capability
+          );
+          if (!spec) {
+            try {
+              const content = fs.readFileSync(sf.filePath, 'utf8');
+              spec = OpenSpecParser.parseSpec(content, sf.capability, sf.filePath);
+              spec.isArchived = true;
+              spec.archiveName = element.archive.name;
+            } catch {
+              spec = {
+                capability: sf.capability,
+                filePath: sf.filePath,
+                purpose: '',
+                requirements: [],
+                isArchived: true,
+                archiveName: element.archive.name,
+              };
+            }
+          }
           children.push(
-            new ArchiveArtifactItemElement(
+            new ArchiveSpecItemElement(
+              spec,
               specFiles.length === 1 ? 'Spec (Delta)' : `Spec (${sf.capability})`,
-              sf.filePath
+              element.archive.name
             )
           );
         }

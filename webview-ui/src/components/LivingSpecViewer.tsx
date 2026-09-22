@@ -150,22 +150,25 @@ export function LivingSpecViewer({ spec }: LivingSpecViewerProps) {
                   fontSize: '11px',
                   fontWeight: '700',
                   textTransform: 'uppercase',
-                  color: 'var(--accent)',
+                  color: spec.isArchived ? '#d2a8ff' : 'var(--accent)',
                   letterSpacing: '0.5px',
-                  backgroundColor: 'rgba(0, 120, 212, 0.15)',
+                  backgroundColor: spec.isArchived ? 'rgba(163, 113, 247, 0.15)' : 'rgba(0, 120, 212, 0.15)',
                   padding: '2px 8px',
                   borderRadius: '4px',
-                  border: '1px solid rgba(0, 120, 212, 0.3)',
+                  border: spec.isArchived ? '1px solid rgba(163, 113, 247, 0.4)' : '1px solid rgba(0, 120, 212, 0.3)',
                 }}
               >
-                Living Capability Spec
+                {spec.isArchived ? 'Archived Spec' : 'Living Capability Spec'}
               </span>
               <span style={{ fontSize: '12px', opacity: 0.7 }}>
                 {spec.requirements.length} requirement{spec.requirements.length === 1 ? '' : 's'} · {totalScenarios} scenario{totalScenarios === 1 ? '' : 's'}
               </span>
             </div>
             <h1 style={{ margin: '4px 0 8px 0', fontSize: '24px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span className="codicon codicon-book" style={{ color: 'var(--accent)' }} />
+              <span
+                className={`codicon ${spec.isArchived ? 'codicon-archive' : 'codicon-book'}`}
+                style={{ color: spec.isArchived ? '#d2a8ff' : 'var(--accent)' }}
+              />
               <span>{spec.capability}</span>
             </h1>
             {spec.filePath && (
@@ -205,7 +208,7 @@ export function LivingSpecViewer({ spec }: LivingSpecViewerProps) {
                 alignItems: 'center',
                 gap: '6px',
                 padding: '6px 14px',
-                backgroundColor: 'var(--accent)',
+                backgroundColor: spec.isArchived ? '#8a63d2' : 'var(--accent)',
                 color: 'var(--accent-fg)',
                 border: 'none',
                 borderRadius: '6px',
@@ -220,6 +223,33 @@ export function LivingSpecViewer({ spec }: LivingSpecViewerProps) {
           </div>
         </div>
 
+        {/* Archived Specification Notice Banner */}
+        {spec.isArchived && (
+          <div
+            style={{
+              marginTop: '16px',
+              padding: '12px 16px',
+              backgroundColor: 'rgba(163, 113, 247, 0.12)',
+              borderRadius: '6px',
+              border: '1px solid rgba(163, 113, 247, 0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              fontSize: '13px',
+              lineHeight: '1.5',
+            }}
+          >
+            <span className="codicon codicon-archive" style={{ color: '#d2a8ff', fontSize: '18px', flexShrink: 0 }} />
+            <div>
+              <strong>Archived Specification</strong>
+              {spec.archiveName ? (
+                <span> from change <code>{spec.archiveName}</code></span>
+              ) : null}
+              . This specification represents historical requirements and behavior preserved at the time of archiving.
+            </div>
+          </div>
+        )}
+
         {/* Purpose Statement */}
         {spec.purpose && (
           <div
@@ -228,7 +258,7 @@ export function LivingSpecViewer({ spec }: LivingSpecViewerProps) {
               padding: '12px 16px',
               backgroundColor: 'rgba(0, 0, 0, 0.2)',
               borderRadius: '6px',
-              borderLeft: '4px solid var(--accent)',
+              borderLeft: spec.isArchived ? '4px solid #a371f7' : '4px solid var(--accent)',
               fontSize: '13.5px',
               lineHeight: '1.6',
             }}

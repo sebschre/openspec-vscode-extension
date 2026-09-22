@@ -33,6 +33,18 @@ export class OpenSpecStateStore extends EventEmitter {
     return this.state.changes.find((c) => c.name === name);
   }
 
+  public getArchivedSpec(capabilityOrPath: string): SpecDetail | undefined {
+    for (const archive of this.state.archive) {
+      if (archive.specs) {
+        const found = archive.specs.find(
+          (s) => s.capability === capabilityOrPath || s.filePath === capabilityOrPath
+        );
+        if (found) return found;
+      }
+    }
+    return undefined;
+  }
+
   public async refresh(): Promise<WorkspaceState> {
     const openspecDir = path.join(this.workspaceRoot, 'openspec');
     const hasOpenSpecRoot = fs.existsSync(openspecDir) && fs.statSync(openspecDir).isDirectory();
@@ -236,17 +248,30 @@ export class OpenSpecStateStore extends EventEmitter {
     for (const entry of entries) {
       if (entry.name.startsWith('.')) continue;
       const fullPath = path.join(archiveDir, entry.name);
+      const specsDir = path.join(fullPath, 'specs');
+      let archivedSpecs: SpecDetail[] | undefined;
+
+      if (fs.existsSync(specsDir)) {
+        archivedSpecs = this.scanDeltaSpecs(specsDir);
+        for (const spec of archivedSpecs) {
+          spec.isArchived = true;
+          spec.archiveName = entry.name;
+        }
+      }
+
       try {
         const stat = fs.statSync(fullPath);
         items.push({
           name: entry.name,
           path: fullPath,
           timestamp: stat.mtime.toISOString(),
+          specs: archivedSpecs,
         });
       } catch {
         items.push({
           name: entry.name,
           path: fullPath,
+          specs: archivedSpecs,
         });
       }
     }

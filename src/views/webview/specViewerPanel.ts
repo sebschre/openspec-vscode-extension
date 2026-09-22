@@ -26,6 +26,7 @@ export class SpecViewerPanel {
   private readonly _cli: OpenSpecCliBridge;
   private _changeName: string;
   private _livingSpecCapability?: string;
+  private _archivedSpec?: any;
   private _isNewChangeMode: boolean = false;
   private _disposables: vscode.Disposable[] = [];
 
@@ -92,6 +93,38 @@ export class SpecViewerPanel {
     SpecViewerPanel.currentPanels.set(panelKey, viewer);
   }
 
+  public static renderArchivedSpec(
+    extensionUri: vscode.Uri,
+    store: OpenSpecStateStore,
+    spec: any,
+    cli?: OpenSpecCliBridge
+  ) {
+    const panelKey = `archived-spec:${spec.archiveName || ''}:${spec.capability}`;
+    const existing = SpecViewerPanel.currentPanels.get(panelKey);
+    if (existing) {
+      existing._panel.reveal(vscode.ViewColumn.One);
+      existing.updateArchivedSpec(spec);
+      return;
+    }
+
+    const panel = vscode.window.createWebviewPanel(
+      'openspec.specViewer',
+      `Archived Spec: ${spec.capability}`,
+      vscode.ViewColumn.One,
+      {
+        enableScripts: true,
+        retainContextWhenHidden: true,
+        localResourceRoots: [
+          vscode.Uri.joinPath(extensionUri, 'dist'),
+          vscode.Uri.joinPath(extensionUri, 'dist', 'webview'),
+        ],
+      }
+    );
+
+    const viewer = new SpecViewerPanel(panel, extensionUri, store, '', false, cli, undefined, spec);
+    SpecViewerPanel.currentPanels.set(panelKey, viewer);
+  }
+
   public static renderNewChange(
     extensionUri: vscode.Uri,
     store: OpenSpecStateStore,
@@ -128,7 +161,8 @@ export class SpecViewerPanel {
     changeName: string,
     isNewChangeMode: boolean = false,
     cli?: OpenSpecCliBridge,
-    livingSpecCapability?: string
+    livingSpecCapability?: string,
+    archivedSpec?: any
   ) {
     this._panel = panel;
     this._extensionUri = extensionUri;
@@ -136,6 +170,7 @@ export class SpecViewerPanel {
     this._changeName = changeName;
     this._isNewChangeMode = isNewChangeMode;
     this._livingSpecCapability = livingSpecCapability;
+    this._archivedSpec = archivedSpec;
     this._cli = cli || new OpenSpecCliBridge(store.getState().rootPath);
 
     this._panel.webview.html = this._getHtmlForWebview();
@@ -149,8 +184,16 @@ export class SpecViewerPanel {
     );
 
     const onStoreChange = () => {
-      if (this._livingSpecCapability) {
-        const spec = this._store.getState().specs.find((s) => s.capability === this._livingSpecCapability);
+      if (this._archivedSpec) {
+        const found = this._store.getArchivedSpec(this._archivedSpec.capability);
+        if (found) {
+          this._archivedSpec = found;
+          this.postMessage({ type: 'SET_LIVING_SPEC', spec: found });
+        }
+      } else if (this._livingSpecCapability) {
+        const spec =
+          this._store.getState().specs.find((s) => s.capability === this._livingSpecCapability) ||
+          this._store.getArchivedSpec(this._livingSpecCapability);
         if (spec) {
           this.postMessage({ type: 'SET_LIVING_SPEC', spec });
         }
@@ -170,6 +213,7 @@ export class SpecViewerPanel {
   public showNewChangeMode() {
     this._isNewChangeMode = true;
     this._livingSpecCapability = undefined;
+    this._archivedSpec = undefined;
     this._panel.title = 'OpenSpec: New Change';
     this.postMessage({
       type: 'SET_NEW_CHANGE_MODE',
@@ -183,6 +227,7 @@ export class SpecViewerPanel {
     }
     this._changeName = changeName;
     this._livingSpecCapability = undefined;
+    this._archivedSpec = undefined;
     this._isNewChangeMode = false;
     SpecViewerPanel.currentPanels.set(changeName, this);
     this._panel.title = `OpenSpec: ${changeName}`;
@@ -198,14 +243,37 @@ export class SpecViewerPanel {
       SpecViewerPanel.currentPanels.delete(oldKey);
     }
     this._livingSpecCapability = capability;
+    this._archivedSpec = undefined;
     this._changeName = '';
     this._isNewChangeMode = false;
     SpecViewerPanel.currentPanels.set(`spec:${capability}`, this);
     this._panel.title = `Spec: ${capability}`;
-    const spec = this._store.getState().specs.find((s) => s.capability === capability);
+    const spec =
+      this._store.getState().specs.find((s) => s.capability === capability) ||
+      this._store.getArchivedSpec(capability);
     if (spec) {
+      if (spec.isArchived) {
+        this._panel.title = `Archived Spec: ${capability}`;
+      }
       this.postMessage({ type: 'SET_LIVING_SPEC', spec });
     }
+  }
+
+  public updateArchivedSpec(spec: any) {
+    const oldKey = this._archivedSpec
+      ? `archived-spec:${this._archivedSpec.archiveName || ''}:${this._archivedSpec.capability}`
+      : '';
+    const newKey = `archived-spec:${spec.archiveName || ''}:${spec.capability}`;
+    if (oldKey && oldKey !== newKey) {
+      SpecViewerPanel.currentPanels.delete(oldKey);
+    }
+    this._archivedSpec = spec;
+    this._livingSpecCapability = undefined;
+    this._changeName = '';
+    this._isNewChangeMode = false;
+    SpecViewerPanel.currentPanels.set(newKey, this);
+    this._panel.title = `Archived Spec: ${spec.capability}`;
+    this.postMessage({ type: 'SET_LIVING_SPEC', spec });
   }
 
   public postMessage(message: ExtensionToWebviewMessage) {
@@ -217,8 +285,12 @@ export class SpecViewerPanel {
       case 'READY': {
         if (this._isNewChangeMode) {
           this.showNewChangeMode();
+        } else if (this._archivedSpec) {
+          this.postMessage({ type: 'SET_LIVING_SPEC', spec: this._archivedSpec });
         } else if (this._livingSpecCapability) {
-          const spec = this._store.getState().specs.find((s) => s.capability === this._livingSpecCapability);
+          const spec =
+            this._store.getState().specs.find((s) => s.capability === this._livingSpecCapability) ||
+            this._store.getArchivedSpec(this._livingSpecCapability);
           if (spec) {
             this.postMessage({ type: 'SET_LIVING_SPEC', spec });
           }
@@ -531,6 +603,11 @@ export class SpecViewerPanel {
     }
     if (this._livingSpecCapability) {
       SpecViewerPanel.currentPanels.delete(`spec:${this._livingSpecCapability}`);
+    }
+    if (this._archivedSpec) {
+      SpecViewerPanel.currentPanels.delete(
+        `archived-spec:${this._archivedSpec.archiveName || ''}:${this._archivedSpec.capability}`
+      );
     }
     this._panel.dispose();
     while (this._disposables.length) {

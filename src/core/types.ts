@@ -28,6 +28,8 @@ export interface SpecDetail {
   filePath: string;
   purpose: string;
   requirements: RequirementItem[];
+  isArchived?: boolean;
+  archiveName?: string;
 }
 
 export interface ProposalDetail {
@@ -78,6 +80,7 @@ export interface ArchiveItem {
   name: string;
   path: string;
   timestamp?: string;
+  specs?: SpecDetail[];
 }
 
 export interface WorkspaceState {

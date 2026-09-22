@@ -118,7 +118,7 @@
       "view/item/context": [
         {
           "command": "openspec.openViewer",
-          "when": "viewItem == change || viewItem == spec",
+          "when": "viewItem == change || viewItem == spec || viewItem == archiveSpec",
           "group": "inline"
         },
         {
@@ -133,7 +133,7 @@
         },
         {
           "command": "openspec.revealArchiveInExplorer",
-          "when": "viewItem == archiveItem || viewItem == archive",
+          "when": "viewItem == archiveItem || viewItem == archive || viewItem == archiveArtifact || viewItem == archiveSpec",
           "group": "navigation"
         }
       ]

@@ -24,26 +24,42 @@ export function registerCommands(
       let targetCapability: string | undefined;
 
       if (typeof changeNameOrItem === 'string') {
-        if (changeNameOrItem.startsWith('spec:')) {
-          targetCapability = changeNameOrItem.slice(5);
+        if (changeNameOrItem.startsWith('archive-spec:') || changeNameOrItem.startsWith('spec:')) {
+          const cap = changeNameOrItem.replace(/^(archive-spec:|spec:)/, '');
+          const archived = store.getArchivedSpec(cap);
+          if (archived) {
+            SpecViewerPanel.renderArchivedSpec(context.extensionUri, store, archived, cli);
+            return;
+          }
+          targetCapability = cap;
         } else if (store.getState().specs.some((s) => s.capability === changeNameOrItem)) {
           targetCapability = changeNameOrItem;
         } else {
+          const archived = store.getArchivedSpec(changeNameOrItem);
+          if (archived) {
+            SpecViewerPanel.renderArchivedSpec(context.extensionUri, store, archived, cli);
+            return;
+          }
           targetChange = changeNameOrItem;
         }
       } else if (changeNameOrItem && typeof changeNameOrItem.spec?.capability === 'string') {
+        if (changeNameOrItem.spec.isArchived) {
+          SpecViewerPanel.renderArchivedSpec(context.extensionUri, store, changeNameOrItem.spec, cli);
+          return;
+        }
         targetCapability = changeNameOrItem.spec.capability;
       } else if (changeNameOrItem && typeof changeNameOrItem.change?.name === 'string') {
         targetChange = changeNameOrItem.change.name;
       } else {
-        // Prompt user to pick an active change or living spec
+        // Prompt user to pick an active change, living spec, or archived spec
         const state = store.getState();
-        if (state.changes.length === 0 && state.specs.length === 0) {
-          vscode.window.showInformationMessage('No active OpenSpec changes or living specs found to view.');
+        const hasArchivedSpecs = state.archive.some((a) => a.specs && a.specs.length > 0);
+        if (state.changes.length === 0 && state.specs.length === 0 && !hasArchivedSpecs) {
+          vscode.window.showInformationMessage('No active OpenSpec changes or specifications found to view.');
           return;
         }
 
-        const items: Array<vscode.QuickPickItem & { changeName?: string; capability?: string }> = [
+        const items: Array<vscode.QuickPickItem & { changeName?: string; capability?: string; archivedSpec?: any }> = [
           ...state.changes.map((c) => ({
             label: `$(git-pull-request) ${c.name}`,
             description: `Active change • ${c.taskProgress.completed}/${c.taskProgress.total} tasks`,
@@ -56,11 +72,27 @@ export function registerCommands(
           })),
         ];
 
+        for (const arch of state.archive) {
+          if (arch.specs) {
+            for (const sp of arch.specs) {
+              items.push({
+                label: `$(archive) ${sp.capability}`,
+                description: `Archived spec (${arch.name}) • ${sp.requirements.length} reqs`,
+                archivedSpec: sp,
+              });
+            }
+          }
+        }
+
         const picked = await vscode.window.showQuickPick(items, {
-          placeHolder: 'Select an OpenSpec change or living specification to view',
+          placeHolder: 'Select an OpenSpec change or specification to view',
         });
 
         if (picked) {
+          if (picked.archivedSpec) {
+            SpecViewerPanel.renderArchivedSpec(context.extensionUri, store, picked.archivedSpec, cli);
+            return;
+          }
           targetChange = picked.changeName;
           targetCapability = picked.capability;
         }
