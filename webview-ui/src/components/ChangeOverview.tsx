@@ -1,16 +1,50 @@
-import { useState } from 'preact/hooks';
+import { useState, useEffect } from 'preact/hooks';
 import { ChangeDetail, DesignDecision } from '../../../src/core/types';
+import { ExtensionToWebviewMessage } from '../../../src/protocol/messages';
 import { getVsCodeApi } from '../vscode';
 
 interface ChangeOverviewProps {
   change: ChangeDetail;
 }
 
+interface ValidationState {
+  success: boolean;
+  stdout: string;
+  stderr?: string;
+  timestamp: number;
+}
+
 export function ChangeOverview({ change }: ChangeOverviewProps) {
   const [copied, setCopied] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationResult, setValidationResult] = useState<ValidationState | null>(null);
+  const [isDiagnosticsExpanded, setIsDiagnosticsExpanded] = useState(false);
   const vscode = getVsCodeApi();
 
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent<ExtensionToWebviewMessage>) => {
+      const msg = event.data;
+      if (msg.type === 'VALIDATION_RESULT' && msg.changeName === change.name) {
+        setIsValidating(false);
+        setValidationResult({
+          success: msg.success,
+          stdout: msg.stdout,
+          stderr: msg.stderr,
+          timestamp: Date.now(),
+        });
+        if (!msg.success) {
+          setIsDiagnosticsExpanded(true);
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [change.name]);
+
   const handleValidate = () => {
+    if (isValidating) return;
+    setIsValidating(true);
     vscode.postMessage({ type: 'RUN_VALIDATE', changeName: change.name });
   };
 
@@ -31,6 +65,101 @@ export function ChangeOverview({ change }: ChangeOverviewProps) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {/* Validation Top Banner */}
+      {validationResult && (
+        <div
+          style={{
+            padding: '14px 16px',
+            backgroundColor: validationResult.success
+              ? 'rgba(46, 160, 67, 0.15)'
+              : 'rgba(248, 81, 73, 0.15)',
+            border: `1px solid ${
+              validationResult.success ? 'var(--badge-added, #2ea043)' : 'var(--badge-removed, #f85149)'
+            }`,
+            borderRadius: '8px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span
+                className={validationResult.success ? 'codicon codicon-pass' : 'codicon codicon-error'}
+                style={{
+                  fontSize: '16px',
+                  color: validationResult.success ? 'var(--badge-added, #2ea043)' : 'var(--badge-removed, #f85149)',
+                }}
+              />
+              <span style={{ fontWeight: '600', fontSize: '13px' }}>
+                {validationResult.success
+                  ? 'Spec Validation Passed: All artifacts and delta specifications are valid.'
+                  : 'Spec Validation Reported Issues'}
+              </span>
+            </div>
+            <button
+              onClick={() => setValidationResult(null)}
+              title="Dismiss validation banner"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--fg)',
+                cursor: 'pointer',
+                opacity: 0.7,
+                padding: '2px 4px',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              <span className="codicon codicon-close" />
+            </button>
+          </div>
+
+          {/* Diagnostics toggle / content */}
+          {(validationResult.stdout || validationResult.stderr) && (
+            <div>
+              <button
+                type="button"
+                onClick={() => setIsDiagnosticsExpanded(!isDiagnosticsExpanded)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--accent)',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  padding: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <span className={`codicon ${isDiagnosticsExpanded ? 'codicon-chevron-down' : 'codicon-chevron-right'}`} />
+                <span>{isDiagnosticsExpanded ? 'Hide diagnostic output' : 'Show diagnostic output'}</span>
+              </button>
+              {isDiagnosticsExpanded && (
+                <pre
+                  style={{
+                    marginTop: '8px',
+                    padding: '10px 12px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontFamily: 'monospace',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-all',
+                    maxHeight: '200px',
+                    overflowY: 'auto',
+                    color: 'var(--fg)',
+                  }}
+                >
+                  {validationResult.stdout || validationResult.stderr}
+                </pre>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Hero Card */}
       <div
         style={{
@@ -56,23 +185,26 @@ export function ChangeOverview({ change }: ChangeOverviewProps) {
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               onClick={handleValidate}
+              disabled={isValidating}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
                 padding: '6px 14px',
-                backgroundColor: 'var(--accent)',
+                backgroundColor: isValidating ? 'rgba(255, 255, 255, 0.2)' : 'var(--accent)',
                 color: 'var(--accent-fg)',
                 border: 'none',
                 borderRadius: '6px',
                 fontSize: '13px',
                 fontWeight: '600',
-                cursor: 'pointer',
+                cursor: isValidating ? 'not-allowed' : 'pointer',
+                opacity: isValidating ? 0.7 : 1,
               }}
             >
-              <span className="codicon codicon-check" />
-              <span>Validate</span>
+              <span className={isValidating ? 'codicon codicon-loading codicon-modifier-spin' : 'codicon codicon-check'} />
+              <span>{isValidating ? 'Validating...' : 'Validate'}</span>
             </button>
+
             <button
               onClick={handleArchive}
               style={{

@@ -4,7 +4,13 @@ import * as path from 'path';
 import { OpenSpecStateStore } from '../../core/store';
 import { OpenSpecCliBridge } from '../../core/cli';
 import { ExtensionToWebviewMessage, WebviewToExtensionMessage } from '../../protocol/messages';
-import { inferChangeName, heuristicSlugify } from '../../core/inference';
+import {
+  inferChangeName,
+  heuristicSlugify,
+  refineProposalMotivation,
+  heuristicRefineMotivation,
+} from '../../core/inference';
+
 
 export class SpecViewerPanel {
   public static currentPanels: Map<string, SpecViewerPanel> = new Map();
@@ -174,10 +180,28 @@ export class SpecViewerPanel {
         }
         break;
       }
+      case 'REFINE_MOTIVATION': {
+        try {
+          const result = await refineProposalMotivation(message.description);
+          this.postMessage({
+            type: 'REFINED_MOTIVATION',
+            motivation: result.motivation,
+            isAi: result.isAi,
+          });
+        } catch {
+          this.postMessage({
+            type: 'REFINED_MOTIVATION',
+            motivation: heuristicRefineMotivation(message.description),
+            isAi: false,
+          });
+        }
+        break;
+      }
       case 'SUBMIT_NEW_CHANGE': {
-        const { name, description, schema } = message;
+        const { name, description, motivation, schema } = message;
         const trimmedName = (name || '').trim();
         const trimmedDesc = (description || '').trim();
+        const trimmedMotivation = (motivation || '').trim() || trimmedDesc;
         const selectedSchema = schema || 'spec-driven';
 
         if (!trimmedName || !/^[a-z0-9-]+$/.test(trimmedName)) {
@@ -219,24 +243,26 @@ export class SpecViewerPanel {
             fs.mkdirSync(changeDir, { recursive: true });
             fs.writeFileSync(yamlPath, `schema: ${selectedSchema}\n`, 'utf8');
 
-            const whySection = trimmedDesc ? `\n\n${trimmedDesc}` : '';
+            const whySection = trimmedMotivation ? `\n\n${trimmedMotivation}` : '';
             const whatSection = trimmedDesc ? `\n\n${trimmedDesc}` : '';
             const proposalContent = `# Proposal: ${trimmedName}\n\n## Why${whySection}\n\n## What Changes${whatSection}\n\n## Capabilities\n\n### New Capabilities\n\n### Modified Capabilities\n\n## Impact\n`;
             fs.writeFileSync(proposalPath, proposalContent, 'utf8');
 
             const tasksContent = `# Tasks\n\n## 1. Implementation\n\n- [ ] 1.1 Initial setup\n`;
             fs.writeFileSync(tasksPath, tasksContent, 'utf8');
-          } else if (trimmedDesc) {
-            // Ensure proposal.md contains the description in ## Why and ## What Changes
+          } else if (trimmedMotivation || trimmedDesc) {
+            // Ensure proposal.md contains the refined motivation in ## Why and description in ## What Changes
             if (fs.existsSync(proposalPath)) {
               let content = fs.readFileSync(proposalPath, 'utf8');
-              if (!content.includes(trimmedDesc)) {
-                content = content.replace(/## Why\s*\n/, `## Why\n\n${trimmedDesc}\n\n`);
-                content = content.replace(/## What Changes\s*\n/, `## What Changes\n\n${trimmedDesc}\n\n`);
-                fs.writeFileSync(proposalPath, content, 'utf8');
+              if (trimmedMotivation) {
+                content = content.replace(/## Why\s*(\n+[\s\S]*?)?(?=\n## What Changes|\n## Capabilities|$)/, `## Why\n\n${trimmedMotivation}\n\n`);
               }
+              if (trimmedDesc && !content.includes(trimmedDesc)) {
+                content = content.replace(/## What Changes\s*(\n+[\s\S]*?)?(?=\n## Capabilities|$)/, `## What Changes\n\n${trimmedDesc}\n\n`);
+              }
+              fs.writeFileSync(proposalPath, content, 'utf8');
             } else {
-              const proposalContent = `# Proposal: ${trimmedName}\n\n## Why\n\n${trimmedDesc}\n\n## What Changes\n\n${trimmedDesc}\n\n## Capabilities\n\n### New Capabilities\n\n### Modified Capabilities\n\n## Impact\n`;
+              const proposalContent = `# Proposal: ${trimmedName}\n\n## Why\n\n${trimmedMotivation}\n\n## What Changes\n\n${trimmedDesc}\n\n## Capabilities\n\n### New Capabilities\n\n### Modified Capabilities\n\n## Impact\n`;
               fs.writeFileSync(proposalPath, proposalContent, 'utf8');
             }
           }
@@ -273,13 +299,37 @@ export class SpecViewerPanel {
         break;
       }
       case 'RUN_VALIDATE': {
-        await vscode.commands.executeCommand('openspec.validate', message.changeName);
+        try {
+          const res = await this._cli.validate(message.changeName);
+          this.postMessage({
+            type: 'VALIDATION_RESULT',
+            changeName: message.changeName,
+            success: res.success,
+            stdout: res.stdout || '',
+            stderr: res.stderr || '',
+          });
+          if (res.success) {
+            vscode.window.showInformationMessage(`OpenSpec validation passed for '${message.changeName}'!`);
+          } else {
+            vscode.window.showErrorMessage(`OpenSpec validation reported errors. See webview or Output panel for details.`);
+          }
+        } catch (err: any) {
+          this.postMessage({
+            type: 'VALIDATION_RESULT',
+            changeName: message.changeName,
+            success: false,
+            stdout: '',
+            stderr: err.message || String(err),
+          });
+          vscode.window.showErrorMessage(`OpenSpec validation failed: ${err.message || String(err)}`);
+        }
         break;
       }
       case 'RUN_ARCHIVE': {
         await vscode.commands.executeCommand('openspec.archive', message.changeName);
         break;
       }
+
       case 'OPEN_FILE': {
         if (message.filePath) {
           const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(message.filePath));

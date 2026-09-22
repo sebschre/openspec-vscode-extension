@@ -136,3 +136,96 @@ export async function inferChangeName(
 
   return { name: heuristicSlugify(trimmed), isAi: false };
 }
+
+export interface RefinedMotivationResult {
+  motivation: string;
+  isAi: boolean;
+}
+
+/**
+ * Offline rule-based motivation synthesizer that formats user notes into a clean, complete sentence or paragraph.
+ */
+export function heuristicRefineMotivation(rawDescription: string): string {
+  const trimmed = (rawDescription || '').trim();
+  if (!trimmed) {
+    return 'This proposal introduces key improvements and features to address project requirements.';
+  }
+
+  // Clean up extra line breaks and whitespace
+  const cleaned = trimmed
+    .replace(/\r\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  // Capitalize first letter
+  let capitalized = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  if (!/[.!?]$/.test(capitalized)) {
+    capitalized += '.';
+  }
+
+  return capitalized;
+}
+
+/**
+ * Refines a user's initial change description into a clear, professional problem/motivation statement
+ * suitable for proposal.md's ## Why section, using vscode.lm with fallback to heuristicRefineMotivation.
+ */
+export async function refineProposalMotivation(
+  description: string,
+  token?: vscode.CancellationToken
+): Promise<RefinedMotivationResult> {
+  const trimmed = description ? description.trim() : '';
+  if (!trimmed) {
+    return {
+      motivation: heuristicRefineMotivation(''),
+      isAi: false,
+    };
+  }
+
+  // Try vscode.lm if available
+  if (vscode.lm && typeof vscode.lm.selectChatModels === 'function') {
+    try {
+      const models = await vscode.lm.selectChatModels();
+      if (models && models.length > 0) {
+        const model = models[0];
+        const messages = [
+          vscode.LanguageModelChatMessage.User(
+            `You are a software architect and technical product strategist drafting the 'Why' (Problem & Motivation) section for an OpenSpec change proposal based on the developer's notes:\n"${trimmed}"\n\nSynthesize this into a clear, professional 1-2 paragraph problem and motivation statement. Address:\n1. The current limitation, pain point, or problem.\n2. Why this change is needed and the expected outcome or value.\n\nDo not include headers (such as "## Why"), bullet points, or markdown code fences. Return ONLY the synthesized prose.`
+          ),
+        ];
+
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Inference timed out')), 4000)
+        );
+
+        const requestPromise = (async () => {
+          const response = await model.sendRequest(messages, {}, token);
+          let fullText = '';
+          for await (const chunk of response.text) {
+            fullText += chunk;
+          }
+          return fullText;
+        })();
+
+        const rawResult = await Promise.race([requestPromise, timeoutPromise]);
+        const cleaned = (rawResult || '')
+          .replace(/```[a-z]*\n?/gi, '')
+          .replace(/```/g, '')
+          .replace(/^#+\s*why\s*\n*/i, '')
+          .trim();
+
+        if (cleaned.length >= 10) {
+          return { motivation: cleaned, isAi: true };
+        }
+      }
+    } catch {
+      // Fall through to heuristic
+    }
+  }
+
+  return {
+    motivation: heuristicRefineMotivation(trimmed),
+    isAi: false,
+  };
+}
+

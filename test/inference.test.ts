@@ -1,7 +1,14 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import * as vscode from 'vscode';
-import { heuristicSlugify, sanitizeKebabSlug, inferChangeName } from '../src/core/inference';
+import {
+  heuristicSlugify,
+  sanitizeKebabSlug,
+  inferChangeName,
+  heuristicRefineMotivation,
+  refineProposalMotivation,
+} from '../src/core/inference';
+
 
 describe('Inference & Slugification', () => {
   describe('sanitizeKebabSlug', () => {
@@ -97,4 +104,64 @@ describe('Inference & Slugification', () => {
       assert.strictEqual(result.name, 'new-change');
     });
   });
+
+  describe('heuristicRefineMotivation', () => {
+    it('should format clean prose and ensure terminal punctuation', () => {
+      const res = heuristicRefineMotivation('add github oauth authentication');
+      assert.strictEqual(res, 'Add github oauth authentication.');
+    });
+
+    it('should preserve existing terminal punctuation', () => {
+      const res = heuristicRefineMotivation('Add GitHub OAuth authentication!');
+      assert.strictEqual(res, 'Add GitHub OAuth authentication!');
+    });
+
+    it('should provide default motivation for empty input', () => {
+      const res = heuristicRefineMotivation('');
+      assert.ok(res.includes('This proposal introduces'));
+    });
+  });
+
+  describe('refineProposalMotivation', () => {
+    it('should fallback to heuristic when no LM model is available', async () => {
+      (vscode.lm as any).selectChatModels = async () => [];
+      const result = await refineProposalMotivation('add github oauth for faster login');
+      assert.strictEqual(result.isAi, false);
+      assert.strictEqual(result.motivation, 'Add github oauth for faster login.');
+    });
+
+    it('should use LM model when available', async () => {
+      (vscode.lm as any).selectChatModels = async () => [
+        {
+          id: 'test-model',
+          sendRequest: async () => ({
+            text: (async function* () {
+              yield 'Users currently face authentication friction.\n';
+              yield 'Adding GitHub OAuth streamlines login and improves security.';
+            })(),
+          }),
+        },
+      ];
+
+      const result = await refineProposalMotivation('add github oauth');
+      assert.strictEqual(result.isAi, true);
+      assert.ok(result.motivation.includes('authentication friction'));
+    });
+
+    it('should fallback gracefully if LM throws error', async () => {
+      (vscode.lm as any).selectChatModels = async () => [
+        {
+          id: 'failing-model',
+          sendRequest: async () => {
+            throw new Error('LM connection lost');
+          },
+        },
+      ];
+
+      const result = await refineProposalMotivation('need dark mode toggle');
+      assert.strictEqual(result.isAi, false);
+      assert.strictEqual(result.motivation, 'Need dark mode toggle.');
+    });
+  });
 });
+

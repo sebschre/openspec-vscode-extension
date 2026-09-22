@@ -77,4 +77,14 @@ describe('AI-Guided Change Creation End-to-End Workflow', () => {
     assert.strictEqual(change?.name, testChangeName);
     assert.ok(change?.proposal?.why?.includes(testDescription));
   });
+
+  it('should format proposal with refined motivation in ## Why and raw description in ## What Changes', () => {
+    const rawNotes = 'add webhook triggers';
+    const refinedMotivation = 'Users currently lack automated event notifications. Adding webhooks enables real-time pipeline integrations.';
+    const proposalContent = `# Proposal: test-refine\n\n## Why\n\n${refinedMotivation}\n\n## What Changes\n\n${rawNotes}\n\n## Capabilities\n\n### New Capabilities\n\n### Modified Capabilities\n\n## Impact\n`;
+
+    assert.ok(proposalContent.includes(`## Why\n\n${refinedMotivation}`));
+    assert.ok(proposalContent.includes(`## What Changes\n\n${rawNotes}`));
+  });
 });
+

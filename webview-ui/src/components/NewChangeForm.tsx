@@ -9,6 +9,9 @@ interface NewChangeFormProps {
 export function NewChangeForm({ availableSchemas = ['spec-driven'] }: NewChangeFormProps) {
   const [description, setDescription] = useState('');
   const [name, setName] = useState('');
+  const [motivation, setMotivation] = useState('');
+  const [isRefining, setIsRefining] = useState(false);
+  const [isMotivationAi, setIsMotivationAi] = useState(false);
   const [schema, setSchema] = useState(availableSchemas[0] || 'spec-driven');
   const [isManuallyEdited, setIsManuallyEdited] = useState(false);
   const [isInferring, setIsInferring] = useState(false);
@@ -28,6 +31,10 @@ export function NewChangeForm({ availableSchemas = ['spec-driven'] }: NewChangeF
           setName(msg.name);
           setIsAiInferred(msg.isAi);
         }
+      } else if (msg.type === 'REFINED_MOTIVATION') {
+        setIsRefining(false);
+        setMotivation(msg.motivation);
+        setIsMotivationAi(msg.isAi);
       } else if (msg.type === 'CHANGE_CREATION_ERROR') {
         setIsSubmitting(false);
         setError(msg.error);
@@ -37,6 +44,7 @@ export function NewChangeForm({ availableSchemas = ['spec-driven'] }: NewChangeF
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, [isManuallyEdited, name]);
+
 
   const handleDescriptionChange = (e: any) => {
     const val = e.target.value;
@@ -84,6 +92,15 @@ export function NewChangeForm({ availableSchemas = ['spec-driven'] }: NewChangeF
 
   const isNameValid = name.trim().length > 0 && /^[a-z0-9-]+$/.test(name.trim());
 
+  const handleRefineMotivation = () => {
+    if (!description.trim() || isRefining) return;
+    setIsRefining(true);
+    vscode.postMessage({
+      type: 'REFINE_MOTIVATION',
+      description: description.trim(),
+    });
+  };
+
   const handleSubmit = (e?: any) => {
     if (e) e.preventDefault();
     if (!isNameValid || isSubmitting) return;
@@ -94,9 +111,11 @@ export function NewChangeForm({ availableSchemas = ['spec-driven'] }: NewChangeF
       type: 'SUBMIT_NEW_CHANGE',
       name: name.trim(),
       description: description.trim(),
+      motivation: motivation.trim() || description.trim(),
       schema,
     });
   };
+
 
   const handleCancel = () => {
     vscode.postMessage({ type: 'CANCEL_NEW_CHANGE' });
@@ -192,8 +211,82 @@ export function NewChangeForm({ availableSchemas = ['spec-driven'] }: NewChangeF
           </div>
         </div>
 
+        {/* Proposal Motivation (Why) Refinement Field */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <label style={{ fontSize: '13px', fontWeight: '600' }}>
+              Proposal Motivation (Why)
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {motivation && (
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    backgroundColor: isMotivationAi ? 'rgba(0, 120, 212, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+                    color: isMotivationAi ? 'var(--accent)' : 'var(--fg)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <span className={isMotivationAi ? 'codicon codicon-sparkle' : 'codicon codicon-edit'} />
+                  <span>{isMotivationAi ? 'AI Synthesized' : 'Custom'}</span>
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={handleRefineMotivation}
+                disabled={!description.trim() || isRefining}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: 'none',
+                  border: '1px solid var(--card-border)',
+                  borderRadius: '4px',
+                  color: !description.trim() || isRefining ? 'var(--fg-muted, #888)' : 'var(--accent)',
+                  cursor: !description.trim() || isRefining ? 'not-allowed' : 'pointer',
+                  fontSize: '12px',
+                  padding: '3px 8px',
+                  fontWeight: '500',
+                }}
+              >
+                <span className={isRefining ? 'codicon codicon-loading codicon-modifier-spin' : 'codicon codicon-sparkle'} />
+                <span>{isRefining ? 'Refining...' : motivation ? 'Re-refine with AI' : 'Refine with AI'}</span>
+              </button>
+            </div>
+          </div>
+          <textarea
+            value={motivation}
+            onInput={(e: any) => setMotivation(e.target.value)}
+            placeholder="Synthesized problem and motivation statement for proposal.md (click 'Refine with AI' to generate from your notes above)..."
+            rows={4}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              backgroundColor: 'var(--vscode-input-background, rgba(0,0,0,0.2))',
+              border: '1px solid var(--vscode-input-border, var(--card-border))',
+              color: 'var(--vscode-input-foreground, var(--fg))',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontFamily: 'inherit',
+              lineHeight: '1.5',
+              resize: 'vertical',
+              boxSizing: 'border-box',
+              outline: 'none',
+            }}
+          />
+          <div style={{ marginTop: '4px', fontSize: '12px', opacity: 0.7 }}>
+            This synthesized statement directly seeds the <code>## Why</code> section in <code>proposal.md</code>.
+          </div>
+        </div>
+
         {/* Inferred / Editable Name Field */}
         <div>
+
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <label style={{ fontSize: '13px', fontWeight: '600' }}>
               Change Name (kebab-case)

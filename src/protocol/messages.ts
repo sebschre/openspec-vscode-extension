@@ -6,6 +6,8 @@ export type ExtensionToWebviewMessage =
   | { type: 'NOTICE'; message: string; level: 'info' | 'warning' | 'error' }
   | { type: 'SET_NEW_CHANGE_MODE'; availableSchemas?: string[] }
   | { type: 'INFERRED_CHANGE_NAME'; name: string; isAi: boolean }
+  | { type: 'REFINED_MOTIVATION'; motivation: string; isAi: boolean }
+  | { type: 'VALIDATION_RESULT'; changeName: string; success: boolean; stdout: string; stderr?: string }
   | { type: 'CHANGE_CREATION_ERROR'; error: string };
 
 export type WebviewToExtensionMessage =
@@ -16,5 +18,7 @@ export type WebviewToExtensionMessage =
   | { type: 'OPEN_FILE'; filePath: string }
   | { type: 'COPY_AI_PROMPT'; changeName: string; promptText: string }
   | { type: 'INFER_CHANGE_NAME'; description: string }
-  | { type: 'SUBMIT_NEW_CHANGE'; name: string; description: string; schema?: string }
+  | { type: 'REFINE_MOTIVATION'; description: string }
+  | { type: 'SUBMIT_NEW_CHANGE'; name: string; description: string; motivation?: string; schema?: string }
   | { type: 'CANCEL_NEW_CHANGE' };
+
