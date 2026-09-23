@@ -2,7 +2,7 @@
   "name": "openspec-vscode-extension",
   "displayName": "OpenSpec for VS Code",
   "description": "Visual workspace for OpenSpec — inspect and steer living specs, active changes, and AI agent runs directly in VS Code.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "sebschre",
   "author": "Sebastian Schreiber <dev@sebastian-schreiber.com>",
   "license": "MIT",

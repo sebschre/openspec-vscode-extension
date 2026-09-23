@@ -70,7 +70,14 @@ function readPng(filePath: string) {
 describe('Marketplace package branding', () => {
   it('uses Sebastian Schreiber and the sebschre publisher identity', () => {
     assert.strictEqual(pkg.author, 'Sebastian Schreiber <dev@sebastian-schreiber.com>');
+<<<<<<< HEAD
     assert.strictEqual(`${pkg.publisher}.${pkg.name}`, 'sebschre.openspec-vscode-extension');
+=======
+    assert.strictEqual(
+      `${pkg.publisher}.${pkg.name}`,
+      "sebschre.openspec-vscode-extension",
+    );
+>>>>>>> changes
   });
 
   it('provides a transparent PNG marketplace icon with a dark outline', () => {

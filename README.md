@@ -65,12 +65,15 @@ npm test
 npx vsce package --no-dependencies
 ```
 
+<<<<<<< HEAD
 ### Marketplace publisher and migration
 
 The extension identity is `sebschre.openspec-vscode-extension`, with Sebastian Schreiber as author. VS Code treats this as a separate extension from the previous `openspec.openspec-vscode` and `sebschre.openspec-vscode` identities; installations under those IDs do not automatically upgrade to this package.
 
 Merging a release-triggering change into `main` lets semantic-release version and publish the same VSIX to the VS Code Marketplace and GitHub Releases. Marketplace authentication uses GitHub OIDC trusted publishing. See [the publishing guide](docs/publishing.md) for repository configuration, the required Marketplace trust policy, dry runs, and recovery.
 
+=======
+>>>>>>> changes
 ---
 
 ## License
