@@ -11,7 +11,7 @@ export function DesignViewer({ change }: DesignViewerProps) {
   const vscode = getVsCodeApi();
 
   const handleCopyPropose = () => {
-    const promptText = '/opsx-propose';
+    const promptText = '/openspec-propose';
     vscode.postMessage({
       type: 'COPY_AI_PROMPT',
       changeName: change.name,
@@ -24,7 +24,7 @@ export function DesignViewer({ change }: DesignViewerProps) {
   const handleRunProposeInTerminal = () => {
     vscode.postMessage({
       type: 'EXECUTE_TERMINAL_COMMAND',
-      command: `/opsx-propose`,
+      command: `/openspec-propose`,
     });
   };
 
@@ -106,7 +106,7 @@ export function DesignViewer({ change }: DesignViewerProps) {
             }}
           >
             <span className="codicon codicon-terminal" />
-            <span>Run /opsx-propose in Terminal</span>
+            <span>Run /openspec-propose in Terminal</span>
           </button>
         </div>
       </div>

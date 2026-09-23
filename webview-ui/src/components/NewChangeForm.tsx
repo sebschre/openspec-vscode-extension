@@ -170,7 +170,7 @@ export function NewChangeForm({ availableSchemas = ['spec-driven'] }: NewChangeF
               fontFamily: 'monospace',
             }}
           >
-            /opsx-explore
+            /openspec-explore
           </code>{' '}
           in your assistant (Antigravity, Cursor, Copilot Chat) to discover and clarify requirements before proposing.
         </div>

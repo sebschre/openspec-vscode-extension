@@ -45,7 +45,7 @@ Refer to the change proposal at openspec/changes/${change.name}/proposal.md and 
   const runApplyInTerminal = () => {
     vscode.postMessage({
       type: 'EXECUTE_TERMINAL_COMMAND',
-      command: `/opsx-apply ${change.name}`,
+      command: `/openspec-apply-change ${change.name}`,
     });
   };
 

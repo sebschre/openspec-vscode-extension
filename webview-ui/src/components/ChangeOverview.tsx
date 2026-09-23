@@ -53,7 +53,7 @@ export function ChangeOverview({ change }: ChangeOverviewProps) {
   };
 
   const handleCopyPropose = () => {
-    const promptText = '/opsx-propose';
+    const promptText = '/openspec-propose';
     vscode.postMessage({
       type: 'COPY_AI_PROMPT',
       changeName: change.name,
@@ -66,7 +66,7 @@ export function ChangeOverview({ change }: ChangeOverviewProps) {
   const handleRunProposeInTerminal = () => {
     vscode.postMessage({
       type: 'EXECUTE_TERMINAL_COMMAND',
-      command: `/opsx-propose`,
+      command: `/openspec-propose`,
     });
   };
 

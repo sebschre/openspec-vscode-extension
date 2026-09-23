@@ -39,6 +39,10 @@ The Visual Spec Viewer SHALL render the `tasks.md` task list as an interactive v
 - **WHEN** a user clicks a checkbox directly in the Visual Spec Viewer task list
 - **THEN** the viewer sends a message to the extension host to update the underlying `tasks.md` file on disk
 
+#### Scenario: Task list implementation actions
+- **WHEN** the user interacts with the action buttons in the task list header
+- **THEN** clicking "Copy AI Prompt" copies `/openspec-apply-change <change-name>` to the clipboard and clicking "Implement in Terminal" triggers execution of `/openspec-apply-change <change-name>` in the dedicated agent terminal
+
 ### Requirement: Change Overview Dossier
 The Visual Spec Viewer SHALL present an overview dossier summarizing the problem statement, scope boundaries, technical decisions, and affected capabilities for the change.
 
@@ -46,12 +50,16 @@ The Visual Spec Viewer SHALL present an overview dossier summarizing the problem
 - **WHEN** the user selects the Overview tab or views an active change
 - **THEN** the viewer displays the parsed proposal motivation, scope fence (what is in and out of scope), and architectural design summary
 
+#### Scenario: Overview action bar canonical propose execution and copy
+- **WHEN** the user interacts with the action bar on the Change Overview card
+- **THEN** clicking "Copy Prompt" copies the canonical `/openspec-propose` command to the clipboard and clicking "Run in Terminal" triggers execution of `/openspec-propose` via the dedicated agent terminal
+
 ### Requirement: Visual Change Creation Form
 The Visual Spec Viewer panel SHALL provide a dedicated Direct Proposal creation form view that initiates an end-to-end specification document generation sequence and renders real-time progress feedback.
 
 #### Scenario: Rendering the change creation form
 - **WHEN** the viewer is opened in new-change mode
-- **THEN** the panel renders a form focused on Direct Proposal creation containing a multi-line change description input, an inferred change name field, an optional schema selector, an agent explore guidance hint directing users to `/opsx-explore` in chat for open-ended brainstorming, and a "Create Change & Generate Specs" submission button
+- **THEN** the panel renders a form focused on Direct Proposal creation containing a multi-line change description input, an inferred change name field, an optional schema selector, an agent explore guidance hint directing users to `/openspec-explore` in chat for open-ended brainstorming, and a "Create Change & Generate Specs" submission button
 
 #### Scenario: Inferred change name generation
 - **WHEN** the user inputs or modifies the change description in the creation form
@@ -112,7 +120,7 @@ The Visual Spec Viewer SHALL provide a dedicated Technical Design tab that rende
 
 #### Scenario: Missing design artifact empty state
 - **WHEN** the user opens the Technical Design tab for a change where `design.md` does not exist or has no decisions defined
-- **THEN** the viewer renders an empty-state card indicating that no technical design document has been authored yet, with an action to copy the `/opsx-propose` command
+- **THEN** the viewer renders an empty-state card indicating that no technical design document has been authored yet, with an action to copy the canonical `/openspec-propose` command and an action to run `/openspec-propose` in the dedicated terminal
 
 
 

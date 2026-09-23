@@ -112,8 +112,23 @@
         "title": "Run in Dedicated Terminal",
         "category": "OpenSpec",
         "icon": "$(play)"
+      },
+      {
+        "command": "openspec.resetTerminalSession",
+        "title": "Reset Dedicated Terminal Session",
+        "category": "OpenSpec"
       }
     ],
+    "configuration": {
+      "title": "OpenSpec",
+      "properties": {
+        "openspec.terminal.agentCommand": {
+          "type": "string",
+          "default": "",
+          "description": "AI coding agent command to run in the OpenSpec terminal. Use {command} as the placeholder for the OpenSpec slash command (e.g., 'agy -i \"{command}\"' or 'claude \"{command}\"'). If unset, clicking Run in Terminal prompts to configure this setting."
+        }
+      }
+    },
     "menus": {
       "view/title": [
         {

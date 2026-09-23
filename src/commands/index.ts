@@ -209,4 +209,13 @@ export function registerCommands(
       }
     })
   );
+
+  // Command: Reset Dedicated Terminal Session
+  context.subscriptions.push(
+    vscode.commands.registerCommand('openspec.resetTerminalSession', () => {
+      TerminalManager.getInstance().resetSession();
+      vscode.window.showInformationMessage('OpenSpec terminal session has been reset.');
+    })
+  );
 }
+

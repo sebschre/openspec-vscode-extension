@@ -111,11 +111,13 @@ export class MockWebviewPanel {
 
 export const commands = {
   _registered: new Map<string, Function>(),
+  commandsExecuted: [] as { id: string; args: any[] }[],
   registerCommand(id: string, handler: Function) {
     this._registered.set(id, handler);
     return { dispose: () => this._registered.delete(id) };
   },
   async executeCommand(id: string, ...args: any[]) {
+    this.commandsExecuted.push({ id, args });
     const fn = this._registered.get(id);
     if (fn) {
       return await fn(...args);
@@ -153,6 +155,9 @@ const _onDidCloseTerminalEmitter = new EventEmitter<any>();
 
 export const window = {
   terminalsCreated: [] as MockTerminal[],
+  lastInformationMessage: undefined as string | undefined,
+  lastInformationActions: [] as string[],
+  showInformationMessageResponse: undefined as string | undefined,
   createTerminal: (options: any) => {
     const name = typeof options === 'string' ? options : options.name || 'Mock Terminal';
     const term = new MockTerminal(name, options);
@@ -163,7 +168,16 @@ export const window = {
   createWebviewPanel: (_viewType: string, title: string, _col: any, _opt: any) => {
     return new MockWebviewPanel(title);
   },
-  showInformationMessage: async (..._args: any[]) => undefined,
+  showInformationMessage: async (msg: string, ...args: string[]) => {
+    window.lastInformationMessage = msg;
+    window.lastInformationActions = args;
+    if (window.showInformationMessageResponse !== undefined) {
+      const resp = window.showInformationMessageResponse;
+      window.showInformationMessageResponse = undefined;
+      return resp;
+    }
+    return args[0];
+  },
   showWarningMessage: async (..._args: any[]) => undefined,
   showErrorMessage: async (..._args: any[]) => undefined,
   showQuickPick: async (items: any[]) => items[0],
@@ -178,12 +192,32 @@ export const window = {
 
 export const env = {
   clipboard: {
-    writeText: async (_text: string) => {},
-    readText: async () => '',
+    lastWrittenText: '',
+    writeText: async (text: string) => {
+      env.clipboard.lastWrittenText = text;
+    },
+    readText: async () => env.clipboard.lastWrittenText,
   },
 };
 
 export const workspace = {
+  _config: new Map<string, any>(),
+  getConfiguration: (section?: string) => ({
+    get: <T = any>(key: string, defaultValue?: T): T => {
+      const fullKey = section ? `${section}.${key}` : key;
+      if (workspace._config.has(fullKey)) {
+        return workspace._config.get(fullKey);
+      }
+      if (section && workspace._config.has(key)) {
+        return workspace._config.get(key);
+      }
+      return defaultValue as T;
+    },
+    update: async (key: string, value: any) => {
+      const fullKey = section ? `${section}.${key}` : key;
+      workspace._config.set(fullKey, value);
+    },
+  }),
   openTextDocument: async (_uri: any) => ({}),
   showTextDocument: async (_doc: any) => ({}),
 };
