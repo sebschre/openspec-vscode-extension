@@ -1,6 +1,6 @@
 {
-  "name": "openspec-vscode",
-  "displayName": "OpenSpec",
+  "name": "openspec-vscode-extension",
+  "displayName": "OpenSpec for VS Code",
   "description": "Visual workspace for OpenSpec — inspect and steer living specs, active changes, and AI agent runs directly in VS Code.",
   "version": "0.1.0",
   "publisher": "sebschre",
@@ -9,7 +9,7 @@
   "icon": "resources/icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/openspec/openspec-vscode-extension"
+    "url": "https://github.com/sebschre/openspec-vscode-extension"
   },
   "engines": {
     "vscode": "^1.84.0"
@@ -38,7 +38,7 @@
       "activitybar": [
         {
           "id": "openspec",
-          "title": "OpenSpec",
+          "title": "OpenSpec for VS Code",
           "icon": "resources/activitybar.svg"
         }
       ]
@@ -122,7 +122,7 @@
       }
     ],
     "configuration": {
-      "title": "OpenSpec",
+      "title": "OpenSpec for VS Code",
       "properties": {
         "openspec.terminal.agentCommand": {
           "type": "string",
