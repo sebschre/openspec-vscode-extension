@@ -4,7 +4,9 @@
   "description": "Visual workspace for OpenSpec — inspect and steer living specs, active changes, and AI agent runs directly in VS Code.",
   "version": "0.1.0",
   "publisher": "openspec",
+  "author": "Sebastian Schreiber <dev@sebastian-schreiber.com>",
   "license": "MIT",
+  "icon": "resources/icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/openspec/openspec-vscode-extension"
@@ -37,7 +39,7 @@
         {
           "id": "openspec",
           "title": "OpenSpec",
-          "icon": "$(book)"
+          "icon": "resources/icon.png"
         }
       ]
     },
@@ -175,7 +177,7 @@
     "vscode:prepublish": "npm run build",
     "build": "node esbuild.config.js",
     "watch": "node esbuild.config.js --watch",
-    "test": "node -e \"require('esbuild').buildSync({ entryPoints: ['test/parser.test.ts', 'test/store.test.ts', 'test/cli.test.ts', 'test/archive.test.ts', 'test/inference.test.ts', 'test/e2e-workflow.test.ts', 'test/living-spec-preview.test.ts', 'test/terminal.test.ts'], bundle: true, platform: 'node', format: 'cjs', outdir: 'dist-test', alias: { vscode: './test/mockVscode.ts' } })\" && node --test dist-test/*.test.js",
+    "test": "node -e \"require('esbuild').buildSync({ entryPoints: ['test/parser.test.ts', 'test/store.test.ts', 'test/cli.test.ts', 'test/archive.test.ts', 'test/inference.test.ts', 'test/e2e-workflow.test.ts', 'test/living-spec-preview.test.ts', 'test/terminal.test.ts', 'test/marketplace-publish.test.ts'], bundle: true, platform: 'node', format: 'cjs', outdir: 'dist-test', alias: { vscode: './test/mockVscode.ts' } })\" && node --test dist-test/*.test.js",
     "typecheck": "tsc --noEmit",
     "package": "vsce package"
   },
