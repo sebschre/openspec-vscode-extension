@@ -179,7 +179,9 @@
     "watch": "node esbuild.config.js --watch",
     "test": "node -e \"require('esbuild').buildSync({ entryPoints: ['test/parser.test.ts', 'test/store.test.ts', 'test/cli.test.ts', 'test/archive.test.ts', 'test/inference.test.ts', 'test/e2e-workflow.test.ts', 'test/living-spec-preview.test.ts', 'test/terminal.test.ts', 'test/marketplace-publish.test.ts'], bundle: true, platform: 'node', format: 'cjs', outdir: 'dist-test', alias: { vscode: './test/mockVscode.ts' } })\" && node --test dist-test/*.test.js",
     "typecheck": "tsc --noEmit",
-    "package": "vsce package"
+    "package": "vsce package",
+    "package:release": "node scripts/package-release.js",
+    "release": "semantic-release"
   },
   "dependencies": {
     "@preact/signals": "^2.0.1",
@@ -188,11 +190,13 @@
     "preact": "^10.25.4"
   },
   "devDependencies": {
+    "@semantic-release/exec": "7.1.0",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.17.0",
     "@types/vscode": "^1.84.0",
-    "@vscode/vsce": "^3.9.2",
+    "@vscode/vsce": "4.0.0",
     "esbuild": "^0.25.0",
+    "semantic-release": "25.0.9",
     "typescript": "^5.7.3"
   }
 }

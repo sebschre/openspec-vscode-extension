@@ -15,7 +15,7 @@ try {
   const manifest = readEntry('extension.vsixmanifest');
   const pkg = JSON.parse(readEntry('extension/package.json'));
   const expectedPublisher = 'sebschre';
-  const expectedName = 'openspec-vscode';
+  const expectedName = 'openspec-vscode-extension';
   const identity = manifest.match(/<Identity\b[^>]*\bId="([^"]+)"[^>]*\bPublisher="([^"]+)"/);
 
   if (!identity || identity[1] !== expectedName || identity[2] !== expectedPublisher) {
@@ -23,6 +23,10 @@ try {
   }
   if (pkg.name !== expectedName || pkg.publisher !== expectedPublisher) {
     throw new Error(`Packaged manifest identity must be ${expectedPublisher}.${expectedName}`);
+  }
+  const expectedVersion = process.argv[3];
+  if (expectedVersion && (pkg.version !== expectedVersion || !manifest.includes(`Version="${expectedVersion}"`))) {
+    throw new Error(`Packaged version must be ${expectedVersion}`);
   }
   if (pkg.author !== 'Sebastian Schreiber <dev@sebastian-schreiber.com>') {
     throw new Error('Packaged author must be Sebastian Schreiber');

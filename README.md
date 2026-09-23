@@ -44,7 +44,7 @@ Click any change or capability to open the rich Visual Spec Viewer tab:
 ### Running in VS Code
 1. Clone the repository:
    ```bash
-   git clone https://github.com/sebastian/openspec-vscode-extension.git
+   git clone https://github.com/sebschre/openspec-vscode-extension.git
    cd openspec-vscode-extension
    ```
 2. Install dependencies and compile:
@@ -67,9 +67,9 @@ npx vsce package --no-dependencies
 
 ### Marketplace publisher and migration
 
-The extension is published as `sebschre.openspec-vscode`, with Sebastian Schreiber as author. The previous package identity was `openspec.openspec-vscode`. VS Code treats these as separate extensions, so an existing installation under the old ID will not automatically upgrade to the new one. Install `sebschre.openspec-vscode` and remove the old installation when ready.
+The extension identity is `sebschre.openspec-vscode-extension`, with Sebastian Schreiber as author. VS Code treats this as a separate extension from the previous `openspec.openspec-vscode` and `sebschre.openspec-vscode` identities; installations under those IDs do not automatically upgrade to this package.
 
-The release workflow's `VSCE_PAT` repository secret must be authorized to publish for the `sebschre` Marketplace publisher. Run the workflow with `dry_run` first to package and verify the VSIX without publishing it.
+Merging a release-triggering change into `main` lets semantic-release version and publish the same VSIX to the VS Code Marketplace and GitHub Releases. Marketplace authentication uses GitHub OIDC trusted publishing. See [the publishing guide](docs/publishing.md) for repository configuration, the required Marketplace trust policy, dry runs, and recovery.
 
 ---
 
