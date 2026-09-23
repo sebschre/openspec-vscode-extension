@@ -18,15 +18,15 @@ The system SHALL validate code formatting, TypeScript typechecking, and automate
 - **THEN** the workflow fails before any packaging or release step can run
 
 ### Requirement: Automated VS Code Marketplace Publishing
-The system SHALL provide an automated release workflow that packages the extension and publishes it to the Visual Studio Code Marketplace upon tagged releases or manual dispatch.
+The system SHALL provide an automated release workflow that packages the extension and publishes it under the `sebschre` publisher identity to the Visual Studio Code Marketplace upon tagged releases or manual dispatch.
 
 #### Scenario: Tagged release deployment
 - **WHEN** a version tag matching `v*.*.*` is pushed to the repository
-- **THEN** the release workflow verifies the build, generates the `.vsix` package, and publishes the package to the Visual Studio Code Marketplace using the configured secret access token
+- **THEN** the release workflow verifies the build, generates a `.vsix` whose publisher is `sebschre`, and publishes that package to the Visual Studio Code Marketplace using a configured credential authorized for `sebschre`.
 
 #### Scenario: Manual dispatch dry-run
 - **WHEN** the release workflow is manually triggered with the dry-run parameter enabled
-- **THEN** the workflow builds and validates packaging without transmitting or publishing the package to the live marketplace
+- **THEN** the workflow builds and validates packaging, including the `sebschre` package identity, without transmitting or publishing the package to the live marketplace.
 
 ### Requirement: Packaged VSIX Asset Retention
 The system SHALL preserve generated `.vsix` packages as downloadable workflow artifacts for auditability, manual testing, and GitHub release attachments.

@@ -52,6 +52,9 @@ jobs:
           echo "file=${VSIX_FILE}" >> "$GITHUB_OUTPUT"
           echo "Found VSIX package: ${VSIX_FILE}"
 
+      - name: Verify packaged publisher and assets
+        run: node scripts/verify-vsix.js "${{ steps.vsix.outputs.file }}"
+
       - name: Upload VSIX as workflow artifact
         uses: actions/upload-artifact@v4
         with:

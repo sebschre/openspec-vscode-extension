@@ -1,5 +1,7 @@
 # OpenSpec for VS Code
 
+![OpenSpec badge](resources/badge.png)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![VS Code](https://img.shields.io/badge/VS%20Code-^1.84.0-blue.svg)](https://marketplace.visualstudio.com)
 
@@ -64,6 +66,12 @@ npm test
 ```bash
 npx vsce package --no-dependencies
 ```
+
+### Marketplace publisher and migration
+
+The extension is published as `sebschre.openspec-vscode`, with Sebastian Schreiber as author. The previous package identity was `openspec.openspec-vscode`. VS Code treats these as separate extensions, so an existing installation under the old ID will not automatically upgrade to the new one. Install `sebschre.openspec-vscode` and remove the old installation when ready.
+
+The release workflow's `VSCE_PAT` repository secret must be authorized to publish for the `sebschre` Marketplace publisher. Run the workflow with `dry_run` first to package and verify the VSIX without publishing it.
 
 ---
 

@@ -14,5 +14,5 @@ openspec/**
 dist-test/**
 .github/**
 docs/**
+scripts/**
 *.vsix
-

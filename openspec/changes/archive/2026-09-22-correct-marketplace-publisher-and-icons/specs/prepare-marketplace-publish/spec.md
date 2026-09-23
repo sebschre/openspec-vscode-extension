@@ -1,10 +1,6 @@
-# Spec: prepare-marketplace-publish
+# Spec Delta
 
-## Purpose
-
-The purpose of this specification is to outline the requirements for preparing the VS Code package for publication to the marketplace. This includes ensuring proper attribution of the author and the use of a consistent icon for branding.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Icon Attribution
 - **The package SHALL include the correct attribution of the author, Sebastian Schreiber.**
@@ -23,16 +19,7 @@ The purpose of this specification is to outline the requirements for preparing t
 - **WHEN** the extension is packaged
 - **THEN** its package metadata SHALL identify Sebastian Schreiber as the author.
 
-### Requirement: Unified Branding
-- **The badge SHALL depict the same icon used in the package.**
-
-#### Scenario: Create Badge
-- **WHEN** the badge is generated
-- **THEN** the badge SHALL display the same icon as the package icon.
-
-#### Scenario: Verify Badge Consistency
-- **WHEN** the badge is displayed
-- **THEN** the icon on the badge SHALL match the icon used in the package.
+## ADDED Requirements
 
 ### Requirement: Publisher Identity
 The package SHALL identify `sebschre` as its Marketplace publisher, producing the extension ID `sebschre.openspec-vscode`.
