@@ -1,76 +1,46 @@
-# Visual Studio Code Marketplace Publishing Guide
+# Publishing OpenSpec for VS Code
 
-This document describes how to configure and trigger automated deployments of the OpenSpec extension for VS Code to the Visual Studio Code Marketplace using GitHub Actions.
+The package identity is `sebschre.openspec-vscode-extension`. Releases originate from `main` and use semantic-release, `@vscode/vsce` 4, and Node 24. GitHub Releases and the VS Code Marketplace receive the same verified VSIX. Nothing is published to npm.
 
----
+## One-time repository setup
 
-## 1. Prerequisites
+Protect `main` with a ruleset requiring a pull request, resolved review threads, and the `Build, Lint & Test` check from GitHub Actions. Require the branch to be up to date and block deletion and force pushes. Use squash merges with the PR title as the commit title. The initial solo-maintainer setup requires no second-person approval; collaborators can add review requirements later.
 
-Before publishing releases, you need:
-1. **VS Code Marketplace Publisher Account**: Ensure the publisher `openspec` (or your chosen publisher) is created at [Visual Studio Marketplace Management Portal](https://marketplace.visualstudio.com/manage).
-2. **Azure DevOps Personal Access Token (PAT)**:
-   - Sign in to your Azure DevOps organization associated with the Marketplace publisher.
-   - Click **User Settings** (top-right avatar) > **Personal Access Tokens**.
-   - Create a new token with:
-     - **Organization**: All accessible organizations
-     - **Scopes**: Custom defined > **Marketplace** > **Manage** (checked)
-   - Copy the generated token string securely.
+Create the GitHub environment `marketplace` and allow deployment only from the branch `main`. No deployment reviewer is required, so successful releases run automatically after merge. Keep the repository's default workflow token read-only; the release job alone requests `contents: write` and `id-token: write`. PR workflows never publish. The workflow actions are pinned to commit SHAs and release runs are serialized without cancelling a running publish.
 
----
+## Marketplace authentication — required before the first release
 
-## 2. Configure GitHub Repository Secret
+1. Sign in to the [Marketplace publisher management portal](https://marketplace.visualstudio.com/manage) as an owner of `sebschre`.
+2. Configure a GitHub trusted publishing policy for owner `sebschre`, repository `openspec-vscode-extension`, and workflow `.github/workflows/release.yml` (use `release.yml` if the portal requests only the filename). If the policy supports an environment condition, bind it to `marketplace`.
+3. Confirm that this trust grants publication under the `sebschre` publisher. GitHub branch protection and its environment do not create Marketplace authorization.
+4. After a successful OIDC publication, remove and revoke any superseded publishing PAT. Do not add `VSCE_PAT`, an Azure client secret, or an npm token to this workflow.
 
-The release workflow requires access to the publisher PAT via GitHub Actions repository secrets:
+The CLI requests a GitHub OIDC token with audience `marketplace.visualstudio.com` and exchanges it for a short-lived Marketplace credential. It fails if token exchange fails and does not fall back to a PAT. See [the official vsce trusted publishing documentation](https://github.com/microsoft/vscode-vsce#trusted-publishing). This policy is configured in Marketplace, outside the GitHub API; `gh` cannot create it. If trusted publishing is unavailable for the publisher, establish Microsoft Entra workload identity federation and use `--azure-credential` in a reviewed follow-up change before enabling live publication.
 
-1. Navigate to your GitHub repository: `https://github.com/openspec/openspec-vscode-extension`
-2. Go to **Settings** > **Secrets and variables** > **Actions**.
-3. Click **New repository secret**.
-4. Set:
-   - **Name**: `VSCE_PAT`
-   - **Secret**: `<your-azure-devops-personal-access-token>`
-5. Click **Add secret**.
+## Release behavior
 
----
+Use meaningful squash-commit titles: `fix: ...` and `perf: ...` produce patches, `feat: ...` produces a minor release, and a `BREAKING CHANGE:` footer produces a major release. Documentation and routine chore commits do not publish by default. Each update of `main` runs the workflow, but only release-triggering commits create a version.
 
-## 3. Triggering a Release via Git Tag
+Tests and typechecking must succeed before semantic-release runs. It analyzes commits since the last version tag, generates notes, updates the runner's package version, builds and verifies `artifacts/extension.vsix`, creates the version tag, publishes to Marketplace, and creates a GitHub Release with that exact VSIX attached. A workflow artifact retains the VSIX for 30 days, including after publication failures. The GitHub Release asset is retained independently.
 
-The automated release workflow (`.github/workflows/release.yml`) triggers whenever a tag matching `v*.*.*` is pushed to GitHub.
+Version changes are not committed back to `main`. The VSIX contains the calculated release version; the manifest in the source tree can retain its development version. This avoids a bot needing to bypass PR protection. Git tags and GitHub Releases identify published versions.
 
-### Release Steps:
+With no existing version tags, semantic-release starts at `1.0.0`; the source manifest's `0.1.0` does not establish release history. If migrating an actual existing release, ensure its corresponding `vX.Y.Z` tag points to its original source commit before enabling this workflow. Never create a fictitious release tag simply to suppress a release.
 
-1. **Update Extension Version**:
-   Update `version` in `package.json` to the target release version (e.g. `0.2.0`):
-   ```json
-   "version": "0.2.0"
-   ```
+The old tag-triggered workflow is replaced. Do not chain publishing from a tag created using `GITHUB_TOKEN`: those tag events do not start another workflow.
 
-2. **Commit and Tag**:
-   ```bash
-   git commit -am "chore: release v0.2.0"
-   git tag v0.2.0
-   git push origin main --tags
-   ```
+## Verification before enabling publication
 
-3. **Automated Pipeline Execution**:
-   GitHub Actions will automatically:
-   - Check out code and set up Node 20.
-   - Run `npm ci`, `npm run typecheck`, and `npm test`.
-   - Compile the bundle via `npm run build`.
-   - Package the `.vsix` file using `@vscode/vsce package`.
-   - Upload the `.vsix` bundle as a GitHub Actions run artifact.
-   - Publish the package to the VS Code Marketplace using `VSCE_PAT`.
-   - Create a GitHub Release titled `v0.2.0` with release notes and the `.vsix` attached.
+On the implementation PR, CI builds the VSIX and verifies its identity, version, author, and icon assets without requesting Marketplace credentials. Configure Marketplace trust before merging a release-triggering PR.
 
----
+After the workflow is on `main`, Actions → Release → Run workflow defaults to `dry_run: true`. It packages the source version for inspection and separately previews the calculated version and release notes. Semantic-release dry runs skip prepare and publish, so this preview package is not necessarily stamped with the upcoming version and does not prove Marketplace authentication works. A live run is the final authentication test.
 
-## 4. Manual Dry-Run / Packaging Verification
+## Recovering a partial release
 
-Maintainers can verify the build and packaging process without publishing to the live marketplace:
+GitHub and Marketplace publication is not atomic. Semantic-release creates a tag before its publish plugins run, so a failure may leave a tag without a Marketplace version or GitHub Release. Re-running semantic-release alone may treat that version as already released.
 
-1. Go to the **Actions** tab in GitHub.
-2. Select the **Release** workflow from the left sidebar.
-3. Click **Run workflow**.
-4. Select the target branch and check the **Dry run** option.
-5. Click **Run workflow**.
-
-When `dry_run` is enabled, the pipeline executes the full compile, test, and packaging steps and uploads the `.vsix` artifact for download and manual inspection, but bypasses the `vsce publish` step.
+1. Inspect the failed run, its commit SHA, the version tag, and both destinations before retrying anything. Pause further release merges during reconciliation.
+2. Download `vsix-<commit SHA>` from that run's artifacts. Verify the embedded publisher, extension name, and version; retain this exact VSIX. Do not build a replacement with the same published version.
+3. If Marketplace is missing the version, an authorized publisher maintainer can upload the retained VSIX through the Marketplace management portal. If it already exists, do not overwrite it or blindly ignore duplicate errors.
+4. If the GitHub Release is missing, use `gh release create vX.Y.Z extension.vsix --repo sebschre/openspec-vscode-extension --verify-tag --generate-notes`. If only its asset is missing, use `gh release upload vX.Y.Z extension.vsix --repo sebschre/openspec-vscode-extension`. Confirm the tag's source SHA matches the failed run first.
+5. Verify both destinations, resolve the original failure, and resume merges. Do not delete a published version tag to force a retry. Fix faulty published code with a new release.

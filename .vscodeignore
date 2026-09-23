@@ -16,3 +16,5 @@ dist-test/**
 docs/**
 scripts/**
 *.vsix
+artifacts/**
+release.config.cjs
