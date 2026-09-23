@@ -105,14 +105,4 @@ describe('Marketplace package branding', () => {
     assert.doesNotMatch(svg, /<rect\b/, 'Activity Bar icon must not include a filled background');
   });
 
-  it('keeps the badge mark aligned with the marketplace icon', () => {
-    const badge = readPng(path.join(rootDir, 'resources', 'badge.png'));
-    assert.strictEqual(badge.width, 220);
-    assert.strictEqual(badge.height, 40);
-    assert.strictEqual(badge.pixel(0, 0)[3], 0, 'Badge corner must remain transparent');
-    for (const [x, y] of [[24, 12], [18, 20], [24, 20], [30, 20], [24, 26]]) {
-      const [red, green, blue, alpha] = badge.pixel(x, y);
-      assert.ok(alpha > 200 && red > 180 && green > 180 && blue > 180, `Badge mark missing at ${x},${y}`);
-    }
-  });
 });

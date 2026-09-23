@@ -1,7 +1,5 @@
 # OpenSpec for VS Code
 
-![OpenSpec badge](resources/badge.png)
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![VS Code](https://img.shields.io/badge/VS%20Code-^1.84.0-blue.svg)](https://marketplace.visualstudio.com)
 

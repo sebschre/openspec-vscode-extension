@@ -31,7 +31,7 @@ try {
     throw new Error('Packaged icon paths do not match the intended assets');
   }
 
-  for (const asset of [pkg.icon, pkg.contributes.viewsContainers.activitybar[0].icon, 'resources/badge.png']) {
+  for (const asset of [pkg.icon, pkg.contributes.viewsContainers.activitybar[0].icon]) {
     execFileSync('unzip', ['-t', vsixPath, `extension/${asset}`], { stdio: 'pipe' });
   }
 
