@@ -325,7 +325,7 @@
     "@fission-ai/openspec": "1.16.0",
     "@preact/signals": "^2.0.1",
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^20.17.0",
+    "@types/node": "^26.6.6",
     "@types/vscode": "^1.84.0",
     "@vscode/codicons": "^0.0.36",
     "@vscode/vsce": "^4.1.0",
