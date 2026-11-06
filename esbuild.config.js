@@ -6,6 +6,10 @@ const isWatch = process.argv.includes('--watch');
 const isProduction = process.argv.includes('--production') || process.env.NODE_ENV === 'production';
 
 async function build() {
+  // Production builds start from a clean dist/ so stale source maps never get packaged.
+  if (isProduction) {
+    fs.rmSync(path.join(__dirname, 'dist'), { recursive: true, force: true });
+  }
   // Ensure output directory exists
   fs.mkdirSync(path.join(__dirname, 'dist', 'webview'), { recursive: true });
 

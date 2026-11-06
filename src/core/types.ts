@@ -83,10 +83,58 @@ export interface ArchiveItem {
   specs?: SpecDetail[];
 }
 
+/** Where a workflow schema was resolved from, in OpenSpec's precedence order. */
+export type SchemaSource = 'project' | 'user' | 'package';
+
+export interface SchemaArtifact {
+  id: string;
+  generates: string;
+  description: string;
+  template: string;
+  instruction?: string;
+  requires: string[];
+  /** Absolute path of the template file, when the schema lives on disk. */
+  templatePath?: string;
+  templateExists: boolean;
+}
+
+export interface SchemaApplyPhase {
+  requires: string[];
+  tracks?: string | null;
+  instruction?: string;
+}
+
+export interface SchemaIssue {
+  level: 'error' | 'warning';
+  message: string;
+}
+
+export interface SchemaDetail {
+  name: string;
+  version?: number;
+  description?: string;
+  source: SchemaSource;
+  /** Schema directory; empty when the schema is known by name only (e.g. CLI not installed). */
+  dirPath: string;
+  schemaPath: string;
+  artifacts: SchemaArtifact[];
+  apply?: SchemaApplyPhase;
+  /** Lower-precedence locations that define a schema with the same name. */
+  shadows: SchemaSource[];
+  /** True when this schema is the project default from `openspec/config.yaml`. */
+  isDefault: boolean;
+  /** Names of active changes whose `.openspec.yaml` selects this schema. */
+  usedByChanges: string[];
+  /** Structural problems found while loading the schema. */
+  issues: SchemaIssue[];
+}
+
 export interface WorkspaceState {
   rootPath: string;
   hasOpenSpecRoot: boolean;
   changes: ChangeDetail[];
   specs: SpecDetail[];
   archive: ArchiveItem[];
+  schemas: SchemaDetail[];
+  defaultSchema: string;
 }

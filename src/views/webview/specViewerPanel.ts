@@ -211,6 +211,15 @@ export class SpecViewerPanel {
     });
   }
 
+  /** Schema names offered by the New Change form, project default first. */
+  public static schemaChoices(store: OpenSpecStateStore): string[] {
+    const { schemas, defaultSchema } = store.getState();
+    const names = schemas
+      .filter((s) => !s.issues.some((i) => i.level === 'error'))
+      .map((s) => s.name);
+    return [defaultSchema, ...names.filter((n) => n !== defaultSchema)];
+  }
+
   public showNewChangeMode() {
     this._isNewChangeMode = true;
     this._livingSpecCapability = undefined;
@@ -218,7 +227,7 @@ export class SpecViewerPanel {
     this._panel.title = 'OpenSpec: New Change';
     this.postMessage({
       type: 'SET_NEW_CHANGE_MODE',
-      availableSchemas: ['spec-driven'],
+      availableSchemas: SpecViewerPanel.schemaChoices(this._store),
     });
   }
 
@@ -342,7 +351,7 @@ export class SpecViewerPanel {
         const { name, description, schema } = message;
         const trimmedName = (name || '').trim();
         const trimmedDesc = (description || '').trim();
-        const selectedSchema = schema || 'spec-driven';
+        const selectedSchema = schema || this._store.getState().defaultSchema;
 
         if (!trimmedName || !/^[a-z0-9-]+$/.test(trimmedName)) {
           this.postMessage({

@@ -1,18 +1,10 @@
-.vscode/**
-.vscode-test/**
-src/**
-webview-ui/**
-test/**
-.gitignore
-.vscodeignore
-tsconfig.json
-esbuild.config.js
-**/*.map
-node_modules/**
-openspec/**
-.agents/**
-dist-test/**
-.github/**
-docs/**
-scripts/**
-*.vsix
+# Everything is bundled into dist/ by esbuild; ship only what the extension needs.
+# Note: vsce applies "!" re-includes after all ignores, so list exact file types.
+**
+!package.json
+!dist/**/*.js
+!dist/**/*.css
+!dist/**/*.ttf
+!resources/**
+!LICENSE
+!CHANGELOG.md

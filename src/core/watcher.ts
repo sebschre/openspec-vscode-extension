@@ -7,7 +7,13 @@ export class WorkspaceWatcher implements vscode.Disposable {
   private debounceMs: number;
   private store: OpenSpecStateStore;
 
-  constructor(store: OpenSpecStateStore, debounceMs = 75) {
+  private extraWatchers: vscode.FileSystemWatcher[] = [];
+
+  /**
+   * @param extraDirs Directories outside the workspace to watch as well
+   *   (e.g. the user-level schema overrides directory).
+   */
+  constructor(store: OpenSpecStateStore, private extraDirs: string[] = [], debounceMs = 75) {
     this.store = store;
     this.debounceMs = debounceMs;
     this.init();
@@ -15,6 +21,11 @@ export class WorkspaceWatcher implements vscode.Disposable {
 
   private init() {
     this.fileWatcher = vscode.workspace.createFileSystemWatcher('**/openspec/**');
+    for (const dir of this.extraDirs) {
+      this.extraWatchers.push(
+        vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(vscode.Uri.file(dir), '**'))
+      );
+    }
 
     const triggerUpdate = () => {
       if (this.debounceTimer) {
@@ -29,9 +40,11 @@ export class WorkspaceWatcher implements vscode.Disposable {
       }, this.debounceMs);
     };
 
-    this.fileWatcher.onDidCreate(triggerUpdate);
-    this.fileWatcher.onDidChange(triggerUpdate);
-    this.fileWatcher.onDidDelete(triggerUpdate);
+    for (const watcher of [this.fileWatcher, ...this.extraWatchers]) {
+      watcher.onDidCreate(triggerUpdate);
+      watcher.onDidChange(triggerUpdate);
+      watcher.onDidDelete(triggerUpdate);
+    }
   }
 
   public dispose() {
@@ -39,5 +52,6 @@ export class WorkspaceWatcher implements vscode.Disposable {
       clearTimeout(this.debounceTimer);
     }
     this.fileWatcher?.dispose();
+    this.extraWatchers.forEach((w) => w.dispose());
   }
 }

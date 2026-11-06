@@ -5,6 +5,7 @@ import { OpenSpecCliBridge } from './core/cli';
 import { ChangesTreeProvider } from './views/tree/changesTreeProvider';
 import { SpecsTreeProvider } from './views/tree/specsTreeProvider';
 import { ArchiveTreeProvider } from './views/tree/archiveTreeProvider';
+import { SchemasTreeProvider } from './views/tree/schemasTreeProvider';
 import { registerCommands } from './commands';
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -14,20 +15,24 @@ export async function activate(context: vscode.ExtensionContext) {
   const outputChannel = vscode.window.createOutputChannel('OpenSpec');
   context.subscriptions.push(outputChannel);
 
-  const store = new OpenSpecStateStore(workspaceRoot);
   const cli = new OpenSpecCliBridge(workspaceRoot);
-  const watcher = new WorkspaceWatcher(store);
+  const store = new OpenSpecStateStore(workspaceRoot, {
+    schemaDiscovery: () => cli.listSchemas(),
+  });
+  const watcher = new WorkspaceWatcher(store, [store.getUserSchemasDir()]);
   context.subscriptions.push(watcher);
 
   // Register Tree Views
   const changesProvider = new ChangesTreeProvider(store);
   const specsProvider = new SpecsTreeProvider(store);
   const archiveProvider = new ArchiveTreeProvider(store);
+  const schemasProvider = new SchemasTreeProvider(store);
 
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider('openspec.views.changes', changesProvider),
     vscode.window.registerTreeDataProvider('openspec.views.specs', specsProvider),
-    vscode.window.registerTreeDataProvider('openspec.views.archive', archiveProvider)
+    vscode.window.registerTreeDataProvider('openspec.views.archive', archiveProvider),
+    vscode.window.registerTreeDataProvider('openspec.views.schemas', schemasProvider)
   );
 
   // Register Commands

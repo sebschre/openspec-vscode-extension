@@ -109,3 +109,27 @@ describe('Marketplace package branding', () => {
   });
 
 });
+
+describe('Marketplace release pipeline', () => {
+  it('packages the dedicated marketplace README instead of the developer README', () => {
+    assert.match(pkg.scripts.package, /--readme-path docs\/marketplace\/README\.md/);
+    const readme = fs.readFileSync(path.join(rootDir, 'docs/marketplace/README.md'), 'utf8');
+    assert.match(readme, /^# OpenSpec for VS Code/);
+    assert.doesNotMatch(readme, /npm run |git clone/, 'Marketplace README must not contain contributor instructions');
+  });
+
+  it('ships a CHANGELOG and keeps release-please in sync with package.json', () => {
+    assert.ok(fs.existsSync(path.join(rootDir, 'CHANGELOG.md')));
+    const manifest = JSON.parse(fs.readFileSync(path.join(rootDir, '.release-please-manifest.json'), 'utf8'));
+    assert.strictEqual(manifest['.'], pkg.version, '.release-please-manifest.json must match package.json version');
+    const config = JSON.parse(fs.readFileSync(path.join(rootDir, 'release-please-config.json'), 'utf8'));
+    assert.strictEqual(config.packages['.']['release-type'], 'node');
+    assert.strictEqual(config['include-component-in-tag'], false, 'Tags must stay in the vX.Y.Z format');
+  });
+
+  it('bundles all runtime code so the VSIX needs no node_modules', () => {
+    assert.strictEqual(pkg.dependencies, undefined);
+    assert.match(pkg.scripts.package, /--no-dependencies/);
+    assert.match(pkg.scripts['vscode:prepublish'], /production/);
+  });
+});

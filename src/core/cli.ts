@@ -1,6 +1,7 @@
 import * as cp from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import type { SchemaLocation } from './schemas';
 
 export interface CliExecutionResult {
   stdout: string;
@@ -26,6 +27,8 @@ export class OpenSpecCliBridge {
     }
 
     const candidatePaths = [
+      // Project-local install (e.g. `npm i -D @fission-ai/openspec`)
+      path.join(this.workspaceRoot, 'node_modules', '.bin', 'openspec'),
       '/opt/homebrew/bin/openspec',
       '/usr/local/bin/openspec',
       path.join(process.env.HOME || '', '.npm-global', 'bin', 'openspec'),
@@ -97,6 +100,49 @@ export class OpenSpecCliBridge {
     return this.execute(args);
   }
 
+  /** Lists every schema the CLI can resolve, with its source location. */
+  public async listSchemas(): Promise<SchemaLocation[]> {
+    if (!(await this.isCliAvailable())) return [];
+    const res = await this.execute(['schema', 'which', '--all', '--json']);
+    if (!res.success) return [];
+    return OpenSpecCliBridge.parseSchemaList(res.stdout);
+  }
+
+  public static parseSchemaList(stdout: string): SchemaLocation[] {
+    try {
+      const parsed = JSON.parse(OpenSpecCliBridge.extractJson(stdout));
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter(
+          (e: any) =>
+            e &&
+            typeof e.name === 'string' &&
+            typeof e.path === 'string' &&
+            ['project', 'user', 'package'].includes(e.source)
+        )
+        .map((e: any) => ({ name: e.name, source: e.source, path: e.path }));
+    } catch {
+      return [];
+    }
+  }
+
+  /** Strips any banner text the CLI prints before its JSON payload. */
+  public static extractJson(stdout: string): string {
+    const start = stdout.search(/[[{]/);
+    return start >= 0 ? stdout.slice(start) : stdout;
+  }
+
+  public async validateSchema(name: string): Promise<CliExecutionResult> {
+    return this.execute(['schema', 'validate', name, '--json']);
+  }
+
+  public async initSchema(name: string, description: string, artifacts: string[]): Promise<CliExecutionResult> {
+    const args = ['schema', 'init', name, '--json', '--no-default'];
+    if (description.trim()) args.push('--description', description.trim());
+    if (artifacts.length) args.push('--artifacts', artifacts.join(','));
+    return this.execute(args);
+  }
+
   public async init(): Promise<CliExecutionResult> {
     return this.execute(['init']);
   }
@@ -111,7 +157,7 @@ export class OpenSpecCliBridge {
         args,
         {
           cwd: execCwd,
-          env: this.getEnrichedEnv(),
+          env: { ...this.getEnrichedEnv(), OPENSPEC_TELEMETRY: '0' },
           timeout: 30000,
         },
         (error, stdout, stderr) => {
