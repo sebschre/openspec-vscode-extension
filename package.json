@@ -11,6 +11,16 @@
     "type": "git",
     "url": "https://github.com/sebschre/openspec-vscode-extension"
   },
+  "homepage": "https://github.com/sebschre/openspec-vscode-extension#readme",
+  "bugs": {
+    "url": "https://github.com/sebschre/openspec-vscode-extension/issues"
+  },
+  "qna": "https://github.com/sebschre/openspec-vscode-extension/discussions",
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
+  },
+  "pricing": "Free",
   "engines": {
     "vscode": "^1.84.0"
   },
@@ -22,8 +32,10 @@
   "keywords": [
     "openspec",
     "spec-driven",
-    "specs",
+    "specifications",
+    "requirements",
     "ai",
+    "agents",
     "claude",
     "copilot",
     "gemini",
@@ -174,25 +186,27 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run build",
+    "vscode:prepublish": "npm run build:production",
     "build": "node esbuild.config.js",
+    "build:production": "node esbuild.config.js --production",
     "watch": "node esbuild.config.js --watch",
-    "test": "node -e \"require('esbuild').buildSync({ entryPoints: ['test/parser.test.ts', 'test/store.test.ts', 'test/cli.test.ts', 'test/archive.test.ts', 'test/inference.test.ts', 'test/e2e-workflow.test.ts', 'test/living-spec-preview.test.ts', 'test/terminal.test.ts', 'test/marketplace-publish.test.ts'], bundle: true, platform: 'node', format: 'cjs', outdir: 'dist-test', alias: { vscode: './test/mockVscode.ts' } })\" && node --test dist-test/*.test.js",
     "typecheck": "tsc --noEmit",
-    "package": "vsce package"
-  },
-  "dependencies": {
-    "@preact/signals": "^2.0.1",
-    "@vscode/codicons": "^0.0.36",
-    "js-yaml": "^4.1.0",
-    "preact": "^10.25.4"
+    "test": "node scripts/run-tests.js",
+    "validate:specs": "openspec validate --all --strict --no-interactive",
+    "package": "vsce package --no-dependencies --readme-path docs/marketplace/README.md",
+    "verify:vsix": "node scripts/verify-vsix.js"
   },
   "devDependencies": {
+    "@fission-ai/openspec": "1.16.0",
+    "@preact/signals": "^2.0.1",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.17.0",
     "@types/vscode": "^1.84.0",
+    "@vscode/codicons": "^0.0.36",
     "@vscode/vsce": "^3.9.2",
     "esbuild": "^0.25.0",
+    "js-yaml": "^4.1.0",
+    "preact": "^10.25.4",
     "typescript": "^5.7.3"
   }
 }
