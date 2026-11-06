@@ -23,6 +23,17 @@ export class ThemeIcon {
   constructor(public id: string, public color?: any) {}
 }
 
+export class MarkdownString {
+  public value = '';
+  constructor(value = '') {
+    this.value = value;
+  }
+  appendMarkdown(text: string) {
+    this.value += text;
+    return this;
+  }
+}
+
 export class ThemeColor {
   constructor(public id: string) {}
 }

@@ -6,23 +6,72 @@ import {
   ChangeDetail,
   SpecDetail,
   ArchiveItem,
+  SchemaDetail,
+  TaskItem,
 } from './types';
 import { OpenSpecParser } from './parser';
+import {
+  DEFAULT_SCHEMA,
+  SchemaLocation,
+  getProjectSchemasDir,
+  getUserSchemasDir,
+  listSchemaDirs,
+  loadSchema,
+  mergeSchemaLocations,
+  readDefaultSchema,
+} from './schemas';
+
+/** Resolves schemas that only the CLI knows about (e.g. built-in package schemas). */
+export type SchemaDiscovery = () => Promise<SchemaLocation[]>;
+
+export interface StoreOptions {
+  /** Override the user-level schemas directory (used by tests). */
+  userSchemasDir?: string;
+  schemaDiscovery?: SchemaDiscovery;
+}
 
 export class OpenSpecStateStore extends EventEmitter {
   private workspaceRoot: string;
   private state: WorkspaceState;
+  private userSchemasDir: string;
+  private schemaDiscovery?: SchemaDiscovery;
+  private discoveredSchemas?: SchemaLocation[];
 
-  constructor(workspaceRoot: string) {
+  constructor(workspaceRoot: string, options: StoreOptions = {}) {
     super();
     this.workspaceRoot = workspaceRoot;
-    this.state = {
-      rootPath: workspaceRoot,
-      hasOpenSpecRoot: false,
+    this.userSchemasDir = options.userSchemasDir ?? getUserSchemasDir();
+    this.schemaDiscovery = options.schemaDiscovery;
+    this.state = this.emptyState(false);
+  }
+
+  private emptyState(hasOpenSpecRoot: boolean): WorkspaceState {
+    return {
+      rootPath: this.workspaceRoot,
+      hasOpenSpecRoot,
       changes: [],
       specs: [],
       archive: [],
+      schemas: [],
+      defaultSchema: DEFAULT_SCHEMA,
     };
+  }
+
+  public getWorkspaceRoot(): string {
+    return this.workspaceRoot;
+  }
+
+  public getUserSchemasDir(): string {
+    return this.userSchemasDir;
+  }
+
+  public getSchema(name: string): SchemaDetail | undefined {
+    return this.state.schemas.find((s) => s.name === name);
+  }
+
+  /** Forces the next refresh to re-run CLI schema discovery. */
+  public invalidateSchemaDiscovery(): void {
+    this.discoveredSchemas = undefined;
   }
 
   public getState(): WorkspaceState {
@@ -50,20 +99,16 @@ export class OpenSpecStateStore extends EventEmitter {
     const hasOpenSpecRoot = fs.existsSync(openspecDir) && fs.statSync(openspecDir).isDirectory();
 
     if (!hasOpenSpecRoot) {
-      this.state = {
-        rootPath: this.workspaceRoot,
-        hasOpenSpecRoot: false,
-        changes: [],
-        specs: [],
-        archive: [],
-      };
+      this.state = this.emptyState(false);
       this.emit('change', this.state);
       return this.state;
     }
 
-    const changes = await this.scanChanges(openspecDir);
-    const specs = await this.scanSpecs(openspecDir);
-    const archive = await this.scanArchive(openspecDir);
+    const changes = this.scanChanges(openspecDir);
+    const specs = this.scanSpecDir(path.join(openspecDir, 'specs'));
+    const archive = this.scanArchive(openspecDir);
+    const defaultSchema = readDefaultSchema(this.workspaceRoot);
+    const schemas = await this.scanSchemas(changes, defaultSchema);
 
     this.state = {
       rootPath: this.workspaceRoot,
@@ -71,6 +116,8 @@ export class OpenSpecStateStore extends EventEmitter {
       changes,
       specs,
       archive,
+      schemas,
+      defaultSchema,
     };
 
     this.emit('change', this.state);
@@ -89,7 +136,7 @@ export class OpenSpecStateStore extends EventEmitter {
     await this.refresh();
   }
 
-  private async scanChanges(openspecDir: string): Promise<ChangeDetail[]> {
+  private scanChanges(openspecDir: string): ChangeDetail[] {
     const changesDir = path.join(openspecDir, 'changes');
     if (!fs.existsSync(changesDir)) {
       return [];
@@ -115,7 +162,7 @@ export class OpenSpecStateStore extends EventEmitter {
       const tasksExists = fs.existsSync(tasksPath);
       const specsExist = fs.existsSync(specsDir) && this.hasSpecFiles(specsDir);
 
-      let schema = 'spec-driven';
+      let schema = readDefaultSchema(this.workspaceRoot);
       if (fs.existsSync(metadataPath)) {
         try {
           const meta = OpenSpecParser.parseMetadata(fs.readFileSync(metadataPath, 'utf8'));
@@ -135,12 +182,12 @@ export class OpenSpecStateStore extends EventEmitter {
         design = OpenSpecParser.parseDesign(fs.readFileSync(designPath, 'utf8'));
       }
 
-      let tasks: any[] = [];
+      let tasks: TaskItem[] = [];
       if (tasksExists) {
         tasks = OpenSpecParser.parseTasks(fs.readFileSync(tasksPath, 'utf8'));
       }
 
-      const deltaSpecs = this.scanDeltaSpecs(specsDir);
+      const deltaSpecs = this.scanSpecDir(specsDir);
 
       const totalTasks = tasks.length;
       const completedTasks = tasks.filter((t) => t.completed).length;
@@ -193,7 +240,8 @@ export class OpenSpecStateStore extends EventEmitter {
     return false;
   }
 
-  private scanDeltaSpecs(specsDir: string): SpecDetail[] {
+  /** Recursively parses every markdown spec under `specsDir`, keyed by capability path. */
+  private scanSpecDir(specsDir: string): SpecDetail[] {
     if (!fs.existsSync(specsDir)) return [];
     const specs: SpecDetail[] = [];
 
@@ -203,7 +251,7 @@ export class OpenSpecStateStore extends EventEmitter {
         const fullPath = path.join(currentDir, entry.name);
         if (entry.isDirectory()) {
           walk(fullPath, relativeCapability ? `${relativeCapability}/${entry.name}` : entry.name);
-        } else if (entry.name === 'spec.md' || entry.name.endsWith('.md')) {
+        } else if (entry.name.endsWith('.md')) {
           const capName = relativeCapability || entry.name.replace(/\.md$/, '');
           const content = fs.readFileSync(fullPath, 'utf8');
           specs.push(OpenSpecParser.parseSpec(content, capName, fullPath));
@@ -215,30 +263,47 @@ export class OpenSpecStateStore extends EventEmitter {
     return specs;
   }
 
-  private async scanSpecs(openspecDir: string): Promise<SpecDetail[]> {
-    const specsDir = path.join(openspecDir, 'specs');
-    if (!fs.existsSync(specsDir)) return [];
-    const specs: SpecDetail[] = [];
-
-    const walk = (currentDir: string, relativeCapability: string = '') => {
-      const entries = fs.readdirSync(currentDir, { withFileTypes: true });
-      for (const entry of entries) {
-        const fullPath = path.join(currentDir, entry.name);
-        if (entry.isDirectory()) {
-          walk(fullPath, relativeCapability ? `${relativeCapability}/${entry.name}` : entry.name);
-        } else if (entry.name === 'spec.md' || entry.name.endsWith('.md')) {
-          const capName = relativeCapability || entry.name.replace(/\.md$/, '');
-          const content = fs.readFileSync(fullPath, 'utf8');
-          specs.push(OpenSpecParser.parseSpec(content, capName, fullPath));
-        }
+  private async scanSchemas(changes: ChangeDetail[], defaultSchema: string): Promise<SchemaDetail[]> {
+    if (this.schemaDiscovery && this.discoveredSchemas === undefined) {
+      try {
+        this.discoveredSchemas = await this.schemaDiscovery();
+      } catch {
+        this.discoveredSchemas = [];
       }
-    };
+    }
 
-    walk(specsDir);
-    return specs;
+    const locations: SchemaLocation[] = [
+      ...listSchemaDirs(getProjectSchemasDir(this.workspaceRoot), 'project'),
+      ...listSchemaDirs(this.userSchemasDir, 'user'),
+      ...(this.discoveredSchemas || []),
+    ];
+
+    const schemas = mergeSchemaLocations(locations).map((loc) => loadSchema(loc, loc.shadows));
+
+    // The built-in schema always exists for the CLI, even when we could not locate it.
+    if (!schemas.some((s) => s.name === DEFAULT_SCHEMA)) {
+      schemas.push({
+        name: DEFAULT_SCHEMA,
+        description: 'Built-in OpenSpec workflow (install the OpenSpec CLI to inspect or fork it)',
+        source: 'package',
+        dirPath: '',
+        schemaPath: '',
+        artifacts: [],
+        shadows: [],
+        isDefault: false,
+        usedByChanges: [],
+        issues: [],
+      });
+    }
+
+    for (const schema of schemas) {
+      schema.isDefault = schema.name === defaultSchema;
+      schema.usedByChanges = changes.filter((c) => c.schema === schema.name).map((c) => c.name);
+    }
+    return schemas;
   }
 
-  private async scanArchive(openspecDir: string): Promise<ArchiveItem[]> {
+  private scanArchive(openspecDir: string): ArchiveItem[] {
     const archiveDir = path.join(openspecDir, 'changes', 'archive');
     if (!fs.existsSync(archiveDir)) return [];
 
@@ -252,7 +317,7 @@ export class OpenSpecStateStore extends EventEmitter {
       let archivedSpecs: SpecDetail[] | undefined;
 
       if (fs.existsSync(specsDir)) {
-        archivedSpecs = this.scanDeltaSpecs(specsDir);
+        archivedSpecs = this.scanSpecDir(specsDir);
         for (const spec of archivedSpecs) {
           spec.isArchived = true;
           spec.archiveName = entry.name;

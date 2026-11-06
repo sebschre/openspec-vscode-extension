@@ -3,6 +3,7 @@ import { OpenSpecStateStore } from '../core/store';
 import { OpenSpecCliBridge } from '../core/cli';
 import { TerminalManager } from '../core/terminal';
 import { SpecViewerPanel } from '../views/webview/specViewerPanel';
+import { registerSchemaCommands } from './schemaCommands';
 
 export function registerCommands(
   context: vscode.ExtensionContext,
@@ -13,6 +14,7 @@ export function registerCommands(
   // Command: Refresh
   context.subscriptions.push(
     vscode.commands.registerCommand('openspec.refresh', async () => {
+      store.invalidateSchemaDiscovery();
       await store.refresh();
       vscode.window.setStatusBarMessage('OpenSpec refreshed', 2000);
     })
@@ -171,6 +173,31 @@ export function registerCommands(
     })
   );
 
+  // Command: Sync delta specs of a change into the living specs (delegated to the agent skill)
+  context.subscriptions.push(
+    vscode.commands.registerCommand('openspec.syncSpecs', async (item?: any) => {
+      let changeName: string | undefined = typeof item === 'string' ? item : item?.change?.name;
+      if (!changeName) {
+        const changes = store.getState().changes.filter((c) => c.artifactsPresent.specs);
+        if (changes.length === 0) {
+          vscode.window.showInformationMessage('No active changes with delta specs to sync.');
+          return;
+        }
+        changeName = (
+          await vscode.window.showQuickPick(changes.map((c) => ({ label: c.name, description: `${c.specs.length} delta spec(s)` })), {
+            placeHolder: 'Select a change whose delta specs should be synced to openspec/specs/',
+          })
+        )?.label;
+      }
+      if (changeName) {
+        TerminalManager.getInstance().executeCommand(`/openspec-sync-specs ${changeName}`, {
+          viewColumn: vscode.ViewColumn.Beside,
+          preserveFocus: false,
+        });
+      }
+    })
+  );
+
   // Command: Reveal Archive in Explorer
   context.subscriptions.push(
     vscode.commands.registerCommand('openspec.revealArchiveInExplorer', async (item?: any) => {
@@ -209,6 +236,8 @@ export function registerCommands(
       }
     })
   );
+
+  registerSchemaCommands(context, store, cli, outputChannel);
 
   // Command: Reset Dedicated Terminal Session
   context.subscriptions.push(
