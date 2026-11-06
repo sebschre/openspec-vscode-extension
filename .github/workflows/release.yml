@@ -76,17 +76,17 @@ jobs:
 
       - name: Typecheck, test & validate specs
         run: |
-          npm run typecheck
-          npm test
-          npm run validate:specs
+          pnpm run typecheck
+          pnpm test
+          pnpm run validate:specs
 
       - name: Package VSIX
         id: vsix
         run: |
           VERSION=$(node -p "require('./package.json').version")
           FILE="openspec-vscode-extension-${VERSION}.vsix"
-          npm run package -- --out "$FILE"
-          npm run verify:vsix -- "$FILE"
+          pnpm run package --out "$FILE"
+          pnpm run verify:vsix "$FILE"
           echo "file=$FILE" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
 
@@ -118,7 +118,7 @@ jobs:
             echo "::error::Secret VSCE_PAT is not configured."
             exit 1
           fi
-          npx vsce publish --packagePath "${{ steps.vsix.outputs.file }}" --skip-duplicate
+          pnpm exec vsce publish --packagePath "${{ steps.vsix.outputs.file }}" --skip-duplicate
 
       - name: Publish to Open VSX
         if: env.DRY_RUN != 'true' && (env.MARKETPLACE == 'all' || env.MARKETPLACE == 'openvsx')
@@ -129,4 +129,4 @@ jobs:
             echo "::warning::Secret OVSX_PAT is not configured; skipping Open VSX."
             exit 0
           fi
-          npx --yes ovsx@1.3.0 publish "${{ steps.vsix.outputs.file }}" --skip-duplicate
+          pnpm dlx ovsx@1.3.0 publish "${{ steps.vsix.outputs.file }}" --skip-duplicate

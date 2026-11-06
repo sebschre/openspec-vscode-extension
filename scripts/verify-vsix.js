@@ -45,7 +45,7 @@ try {
   const readmeEntry = entries.find((e) => /^extension\/readme\.md$/i.test(e));
   if (!readmeEntry) throw new Error('Missing packaged README');
   const readme = readEntry(readmeEntry);
-  if (/developer guide|npm run |git clone|## Repository layout/i.test(readme)) {
+  if (/developer guide|p?npm run |pnpm install|git clone|## Repository layout/i.test(readme)) {
     throw new Error('Packaged README looks like the developer README; package with --readme-path docs/marketplace/README.md');
   }
   if (!entries.some((e) => /^extension\/changelog\.md$/i.test(e))) {

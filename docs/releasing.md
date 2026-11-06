@@ -51,7 +51,7 @@ until 1.0.0. To force a specific version, add `Release-As: 1.0.0` to a commit bo
 
 1. Sign in at <https://open-vsx.org> with GitHub and sign the publisher agreement.
 2. Create an access token under *Settings → Access Tokens*.
-3. Create the namespace once: `npx ovsx create-namespace sebschre -p <token>`.
+3. Create the namespace once: `pnpm dlx ovsx create-namespace sebschre -p <token>`.
 4. Save the token as the repository secret `OVSX_PAT`.
 
 If `OVSX_PAT` is missing, the Open VSX step is skipped with a warning. A missing `VSCE_PAT`
