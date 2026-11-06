@@ -328,7 +328,7 @@
     "@types/node": "^26.6.6",
     "@types/vscode": "^1.84.0",
     "@vscode/codicons": "^0.0.36",
-    "@vscode/vsce": "^3.9.2",
+    "@vscode/vsce": "^4.1.0",
     "esbuild": "^0.25.0",
     "js-yaml": "^4.1.0",
     "preact": "^10.25.4",
