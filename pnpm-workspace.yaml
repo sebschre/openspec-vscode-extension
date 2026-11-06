@@ -2,6 +2,3 @@
 onlyBuiltDependencies:
   - '@vscode/vsce-sign'
   - esbuild
-# keytar is only used by `vsce login` for local credential storage; CI uses VSCE_PAT.
-ignoredBuiltDependencies:
-  - keytar

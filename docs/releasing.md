@@ -39,20 +39,27 @@ until 1.0.0. To force a specific version, add `Release-As: 1.0.0` to a commit bo
   trigger CI. With a PAT, CI runs on the release PR too.
 - Use **squash merging** so the PR title becomes the commit that release-please reads.
 
+### `marketplace` environment
+
+The publish job runs in the `marketplace` deployment environment. GitHub creates it on first
+use. Under **Settings → Environments → marketplace**, restrict *Deployment branches and tags*
+to `main`, and preferably store `VSCE_PAT` / `OVSX_PAT` there instead of as repository
+secrets, so that only the release job on `main` can read them.
+
 ### VS Code Marketplace: `VSCE_PAT`
 
 1. Make sure the `sebschre` publisher exists at
    <https://marketplace.visualstudio.com/manage>.
 2. In Azure DevOps, create a Personal Access Token with **Organization: All accessible
    organizations** and scope **Marketplace → Manage**.
-3. Save it as the repository secret `VSCE_PAT`.
+3. Save it as the secret `VSCE_PAT` (on the `marketplace` environment, or as a repository secret).
 
 ### Open VSX: `OVSX_PAT`
 
 1. Sign in at <https://open-vsx.org> with GitHub and sign the publisher agreement.
 2. Create an access token under *Settings → Access Tokens*.
 3. Create the namespace once: `pnpm dlx ovsx create-namespace sebschre -p <token>`.
-4. Save the token as the repository secret `OVSX_PAT`.
+4. Save the token as the secret `OVSX_PAT` (on the `marketplace` environment, or as a repository secret).
 
 If `OVSX_PAT` is missing, the Open VSX step is skipped with a warning. A missing `VSCE_PAT`
 fails the publish job.
@@ -66,3 +73,11 @@ fails the publish job.
 - With `dry_run` off, it publishes the current `package.json` version to the selected
   `marketplace` (`all`, `vscode` or `openvsx`). Use this to retry a publish that failed, for
   example after adding a missing token. Versions that are already published are skipped.
+
+## Dependency updates
+
+Dependabot opens monthly grouped PRs for GitHub Actions and for minor/patch dev-dependency
+updates. Actions are pinned to commit SHAs, and Dependabot keeps the pins and their version
+comments current. Major npm upgrades are ignored on purpose and done by hand. `@types/node`
+stays on the Node.js line VS Code ships (22), and `@types/vscode` stays in step with
+`engines.vscode`.
