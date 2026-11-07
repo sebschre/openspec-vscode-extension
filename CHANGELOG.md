@@ -4,6 +4,13 @@ All notable changes to this extension are documented here. This file is maintain
 automatically by [release-please](https://github.com/googleapis/release-please) from
 [Conventional Commits](https://www.conventionalcommits.org/).
 
+## [0.3.0](https://github.com/sebschre/openspec-vscode-extension/compare/v0.2.0...v0.3.0) (2026-11-07)
+
+
+### Features
+
+* **schemas:** streamline customizing forked schemas ([#13](https://github.com/sebschre/openspec-vscode-extension/issues/13)) ([ca5e585](https://github.com/sebschre/openspec-vscode-extension/commit/ca5e5850ccb09bded5f55a364a699fab6eaa86ab))
+
 ## [0.2.0](https://github.com/sebschre/openspec-vscode-extension/compare/v0.1.0...v0.2.0) (2026-11-06)
 
 
