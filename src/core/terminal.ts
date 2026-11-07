@@ -25,6 +25,98 @@ export function resolveAgentCommand(template: string, command: string): string {
   return `${trimmedTemplate} "${trimmedCommand}"`;
 }
 
+export const AGENT_COMMAND_SETTING = 'openspec.terminal.agentCommand';
+
+export interface AgentPreset {
+  id: string;
+  label: string;
+  binary: string;
+  template: string;
+}
+
+/**
+ * Known AI coding agent CLIs. Each template starts an interactive session with
+ * the slash command as the first prompt, so later commands can be sent to the
+ * running session.
+ */
+export const AGENT_PRESETS: readonly AgentPreset[] = [
+  { id: 'claude', label: 'Claude Code', binary: 'claude', template: 'claude "{command}"' },
+  { id: 'antigravity', label: 'Antigravity', binary: 'agy', template: 'agy -i "{command}"' },
+  { id: 'gemini', label: 'Gemini CLI', binary: 'gemini', template: 'gemini -i "{command}"' },
+  { id: 'codex', label: 'Codex CLI', binary: 'codex', template: 'codex "{command}"' },
+  { id: 'opencode', label: 'opencode', binary: 'opencode', template: 'opencode --prompt "{command}"' },
+];
+
+export type AgentPickResult =
+  | { kind: 'template'; template: string; label: string }
+  | { kind: 'openSettings' }
+  | { kind: 'copy' };
+
+interface AgentPickItem extends vscode.QuickPickItem {
+  action: 'preset' | 'custom' | 'openSettings' | 'copy';
+  preset?: AgentPreset;
+}
+
+/**
+ * Shows the agent preset picker. When `command` is given (the unset flow), the
+ * picker also offers Open Settings and Copy Command entries.
+ */
+export async function pickAgentCommand(context?: { command?: string }): Promise<AgentPickResult | undefined> {
+  const current = (vscode.workspace.getConfiguration('openspec.terminal').get<string>('agentCommand') || '').trim();
+  const isCustomCurrent = !!current && !AGENT_PRESETS.some((p) => p.template === current);
+
+  const items: AgentPickItem[] = AGENT_PRESETS.map((preset) => ({
+    label: preset.label,
+    description: preset.template === current ? `${preset.template} (current)` : preset.template,
+    detail: `Requires the \`${preset.binary}\` CLI on your PATH`,
+    action: 'preset',
+    preset,
+  }));
+  items.push({
+    label: 'Custom command…',
+    description: isCustomCurrent ? `${current} (current)` : 'Any CLI; use {command} where the slash command goes',
+    action: 'custom',
+  });
+  if (context?.command) {
+    items.push(
+      { label: 'Open Settings', description: AGENT_COMMAND_SETTING, action: 'openSettings' },
+      { label: 'Copy Command', description: context.command, action: 'copy' }
+    );
+  }
+
+  const picked = await vscode.window.showQuickPick(items, {
+    title: 'OpenSpec: Choose the AI coding agent for the OpenSpec terminal',
+    placeHolder: context?.command
+      ? `No agent configured yet. Pick one to run ${context.command}`
+      : 'Pick the agent that OpenSpec terminal actions launch',
+    ignoreFocusOut: true,
+  });
+  if (!picked) {
+    return undefined;
+  }
+
+  switch (picked.action) {
+    case 'preset':
+      return { kind: 'template', template: picked.preset!.template, label: picked.preset!.label };
+    case 'openSettings':
+      return { kind: 'openSettings' };
+    case 'copy':
+      return { kind: 'copy' };
+    case 'custom': {
+      const entered = await vscode.window.showInputBox({
+        title: 'OpenSpec: Custom agent command',
+        prompt: 'Command that launches your agent. {command} is replaced with the slash command; without it, the command is appended in quotes.',
+        placeHolder: 'my-agent --prompt "{command}"',
+        value: current,
+        ignoreFocusOut: true,
+        validateInput: (value) => (value.trim() ? undefined : 'Enter a command, e.g. my-agent "{command}"'),
+      });
+      const template = entered?.trim();
+      return template ? { kind: 'template', template, label: 'a custom agent command' } : undefined;
+    }
+  }
+}
+
 /**
  * Manages the dedicated terminal instance for OpenSpec.
  * Supports positioning adjacent to the OpenSpec window (ViewColumn.Beside / ViewColumn.Two),
@@ -92,27 +184,69 @@ export class TerminalManager {
   }
 
   /**
-   * Displays guidance when an AI agent command is required but unset.
+   * Handles a terminal action attempted while no agent command is configured:
+   * offers the agent preset picker, saves the choice and re-runs the command.
    */
-  public async handleUnsetAgentCommand(command: string): Promise<void> {
-    const action = await vscode.window.showInformationMessage(
-      "OpenSpec terminal execution requires an AI coding agent command. Please set 'openspec.terminal.agentCommand' in settings (e.g. 'agy -i \"{command}\"' or 'claude \"{command}\"').",
-      'Configure Setting',
-      'Copy Command'
-    );
-
-    if (action === 'Configure Setting') {
-      await vscode.commands.executeCommand('workbench.action.openSettings', 'openspec.terminal.agentCommand');
-    } else if (action === 'Copy Command') {
-      await vscode.env.clipboard.writeText(command.trim());
+  public async handleUnsetAgentCommand(command: string, options?: ExecuteTerminalOptions): Promise<void> {
+    const trimmed = command.trim();
+    const choice = await pickAgentCommand({ command: trimmed });
+    if (!choice) {
+      return;
+    }
+    if (choice.kind === 'openSettings') {
+      await vscode.commands.executeCommand('workbench.action.openSettings', AGENT_COMMAND_SETTING);
+      return;
+    }
+    if (choice.kind === 'copy') {
+      await vscode.env.clipboard.writeText(trimmed);
       vscode.window.showInformationMessage('Copied command to clipboard!');
+      return;
+    }
+    await this.saveAgentCommand(choice.template, choice.label);
+    const effective = (vscode.workspace.getConfiguration('openspec.terminal').get<string>('agentCommand') || '').trim();
+    if (effective) {
+      // Only re-run when the setting now resolves; otherwise the picker would reopen.
+      this.executeCommand(trimmed, options);
+    }
+  }
+
+  /**
+   * Lets the user choose or change the agent command at any time.
+   * Returns the saved template, or undefined if cancelled.
+   */
+  public async configureAgentCommand(): Promise<string | undefined> {
+    const choice = await pickAgentCommand();
+    if (!choice || choice.kind !== 'template') {
+      return undefined;
+    }
+    await this.saveAgentCommand(choice.template, choice.label);
+    return choice.template;
+  }
+
+  /**
+   * Saves the template to user settings and resets the session so the next
+   * execution launches the newly configured agent.
+   */
+  private async saveAgentCommand(template: string, label: string): Promise<void> {
+    const config = vscode.workspace.getConfiguration('openspec.terminal');
+    await config.update('agentCommand', template, vscode.ConfigurationTarget.Global);
+    this.resetSession();
+
+    // A workspace or folder value takes precedence over the user setting.
+    const effective = (vscode.workspace.getConfiguration('openspec.terminal').get<string>('agentCommand') || '').trim();
+    if (effective !== template) {
+      vscode.window.showWarningMessage(
+        `Saved ${label} to your user settings, but this workspace overrides '${AGENT_COMMAND_SETTING}' with '${effective}'.`
+      );
+    } else {
+      vscode.window.showInformationMessage(`OpenSpec terminal will use ${label}: ${template}`);
     }
   }
 
   /**
    * Sends a command to the dedicated terminal for execution.
    * If the command is a slash command (e.g. /openspec-apply-change) and not raw:
-   *  - Checks if openspec.terminal.agentCommand is configured. If unset, prompts user and aborts.
+   *  - Checks if openspec.terminal.agentCommand is configured. If unset, offers the agent picker and returns false.
    *  - If session is fresh, wraps command in configured template and sets session launched.
    *  - If session is already active, sends raw slash command directly to the running agent REPL.
    */
@@ -129,8 +263,9 @@ export class TerminalManager {
       const agentTemplate = (config.get<string>('agentCommand') || '').trim();
 
       if (!agentTemplate) {
-        // Unset configuration: abort execution and show guidance notification
-        this.handleUnsetAgentCommand(trimmed);
+        // Unset configuration: nothing goes to the shell; offer the agent picker,
+        // which re-runs this command once an agent is chosen.
+        void this.handleUnsetAgentCommand(trimmed, options);
         return false;
       }
 

@@ -51,12 +51,13 @@ A schema decides which artifacts a change produces and in what order. From the *
    `npm install -g @fission-ai/openspec`
 2. Open a folder that has an `openspec/` directory, or run `openspec init` in your project.
 3. Click the **OpenSpec** icon in the Activity Bar.
+4. To run slash commands from the extension, pick your coding agent with **OpenSpec: Configure Agent Command** (or just click a Run in Terminal action, which asks the first time).
 
 ## Settings
 
 | Setting | Description |
 | --- | --- |
-| `openspec.terminal.agentCommand` | The command that runs your AI agent in the OpenSpec terminal. Use `{command}` where the slash command goes, e.g. `claude "{command}"` or `agy -i "{command}"`. |
+| `openspec.terminal.agentCommand` | The command that runs your AI agent in the OpenSpec terminal. Use `{command}` where the slash command goes, e.g. `claude "{command}"`, `gemini -i "{command}"`, `codex "{command}"` or `agy -i "{command}"`. Run **OpenSpec: Configure Agent Command** to pick from presets; the first terminal action offers the same picker while it is unset. |
 
 ## Commands
 

@@ -196,10 +196,34 @@ export const window = {
     }
     return args[0];
   },
-  showWarningMessage: async (..._args: any[]) => undefined,
+  lastWarningMessage: undefined as string | undefined,
+  showWarningMessage: async (msg: string, ..._args: any[]) => {
+    window.lastWarningMessage = msg;
+    return undefined;
+  },
   showErrorMessage: async (..._args: any[]) => undefined,
-  showQuickPick: async (items: any[]) => items[0],
-  showInputBox: async (opt?: any) => opt?.placeHolder || 'mock-input',
+  lastQuickPickItems: [] as any[],
+  /** Selects the item with this label; null dismisses; undefined picks the first item. */
+  showQuickPickResponse: undefined as string | null | undefined,
+  showQuickPick: async (items: any[]) => {
+    window.lastQuickPickItems = items;
+    const resp = window.showQuickPickResponse;
+    window.showQuickPickResponse = undefined;
+    if (resp === null) return undefined;
+    if (resp !== undefined) return items.find((i) => (typeof i === 'string' ? i : i.label) === resp);
+    return items[0];
+  },
+  lastInputBoxOptions: undefined as any,
+  /** Value returned by the next showInputBox; null dismisses. */
+  showInputBoxResponse: undefined as string | null | undefined,
+  showInputBox: async (opt?: any) => {
+    window.lastInputBoxOptions = opt;
+    const resp = window.showInputBoxResponse;
+    window.showInputBoxResponse = undefined;
+    if (resp === null) return undefined;
+    if (resp !== undefined) return resp;
+    return opt?.placeHolder || 'mock-input';
+  },
   setStatusBarMessage: (_msg: string, _timeout?: number) => ({ dispose: () => {} }),
   createOutputChannel: (_name: string) => ({
     show: () => {},
@@ -207,6 +231,12 @@ export const window = {
     dispose: () => {},
   }),
 };
+
+export enum ConfigurationTarget {
+  Global = 1,
+  Workspace = 2,
+  WorkspaceFolder = 3,
+}
 
 export const env = {
   clipboard: {
@@ -220,6 +250,7 @@ export const env = {
 
 export const workspace = {
   _config: new Map<string, any>(),
+  lastConfigUpdate: undefined as { key: string; value: any; target: any } | undefined,
   getConfiguration: (section?: string) => ({
     get: <T = any>(key: string, defaultValue?: T): T => {
       const fullKey = section ? `${section}.${key}` : key;
@@ -231,8 +262,9 @@ export const workspace = {
       }
       return defaultValue as T;
     },
-    update: async (key: string, value: any) => {
+    update: async (key: string, value: any, target?: any) => {
       const fullKey = section ? `${section}.${key}` : key;
+      workspace.lastConfigUpdate = { key: fullKey, value, target };
       workspace._config.set(fullKey, value);
     },
   }),

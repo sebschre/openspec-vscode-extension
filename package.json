@@ -166,6 +166,12 @@
         "category": "OpenSpec"
       },
       {
+        "command": "openspec.configureAgentCommand",
+        "title": "Configure Agent Command",
+        "category": "OpenSpec",
+        "icon": "$(settings-gear)"
+      },
+      {
         "command": "openspec.schema.fork",
         "title": "Customize Schema (Fork to Project)",
         "category": "OpenSpec",
@@ -243,7 +249,7 @@
         "openspec.terminal.agentCommand": {
           "type": "string",
           "default": "",
-          "description": "AI coding agent command to run in the OpenSpec terminal. Use {command} as the placeholder for the OpenSpec slash command (e.g., 'agy -i \"{command}\"' or 'claude \"{command}\"'). If unset, clicking Run in Terminal prompts to configure this setting."
+          "markdownDescription": "Command that launches your AI coding agent in the OpenSpec terminal. `{command}` is replaced with the OpenSpec slash command; without it, the slash command is appended in quotes. Works with any agent CLI, for example:\n\n- Claude Code: `claude \"{command}\"`\n- Antigravity: `agy -i \"{command}\"`\n- Gemini CLI: `gemini -i \"{command}\"`\n- Codex CLI: `codex \"{command}\"`\n- opencode: `opencode --prompt \"{command}\"`\n\nRun **OpenSpec: Configure Agent Command** to pick one. If unset, the first terminal action offers the same picker."
         }
       }
     },
@@ -263,6 +269,11 @@
           "command": "openspec.openTerminal",
           "when": "view =~ /^openspec\\.views\\./",
           "group": "navigation@3"
+        },
+        {
+          "command": "openspec.configureAgentCommand",
+          "when": "view =~ /^openspec\\.views\\./",
+          "group": "terminal@1"
         },
         {
           "command": "openspec.schema.new",
