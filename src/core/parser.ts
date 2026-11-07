@@ -111,6 +111,7 @@ export class OpenSpecParser {
           description: '',
           operation: currentOperation,
           scenarios: [],
+          lineIndex: i,
         };
         requirements.push(currentReq);
         currentScenario = null;
@@ -125,6 +126,7 @@ export class OpenSpecParser {
             when: '',
             then: '',
             rawText: '',
+            lineIndex: i,
           };
           currentReq.scenarios.push(currentScenario);
         }

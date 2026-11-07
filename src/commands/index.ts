@@ -199,6 +199,16 @@ export function registerCommands(
     })
   );
 
+  // Command: Open the spec.md behind a living spec item
+  context.subscriptions.push(
+    vscode.commands.registerCommand('openspec.openSpecFile', async (item?: any) => {
+      const filePath: string | undefined = typeof item === 'string' ? item : item?.spec?.filePath;
+      if (filePath) {
+        await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(filePath));
+      }
+    })
+  );
+
   // Command: Reveal Archive in Explorer
   context.subscriptions.push(
     vscode.commands.registerCommand('openspec.revealArchiveInExplorer', async (item?: any) => {

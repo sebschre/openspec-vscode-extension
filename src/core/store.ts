@@ -21,6 +21,7 @@ import {
   mergeSchemaLocations,
   readDefaultSchema,
 } from './schemas';
+import { isChangeComplete } from './artifacts';
 
 /** Resolves schemas that only the CLI knows about (e.g. built-in package schemas). */
 export type SchemaDiscovery = () => Promise<SchemaLocation[]>;
@@ -117,8 +118,17 @@ export class OpenSpecStateStore extends EventEmitter {
     const changes = this.scanChanges(openspecDir);
     const specs = this.scanSpecDir(path.join(openspecDir, 'specs'));
     const archive = this.scanArchive(openspecDir);
+    for (const spec of specs) {
+      spec.pendingChanges = changes
+        .filter((c) => c.specs.some((d) => d.capability === spec.capability))
+        .map((c) => c.name);
+    }
     const defaultSchema = readDefaultSchema(this.workspaceRoot);
     const schemas = await this.scanSchemas(changes, defaultSchema);
+    for (const change of changes) {
+      const schema = schemas.find((sc) => sc.name === change.schema);
+      if (schema && schema.artifacts.length > 0) change.isComplete = isChangeComplete(change, schema);
+    }
 
     this.state = {
       rootPath: this.workspaceRoot,
