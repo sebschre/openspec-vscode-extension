@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 import { OpenSpecStateStore } from '../../core/store';
-import { SchemaArtifact, SchemaDetail, SchemaIssue } from '../../core/types';
+import { SchemaArtifact, SchemaDetail, SchemaIssue, SchemaLineage } from '../../core/types';
 
 type SchemaTreeElement = SchemaItem | SchemaArtifactItem | SchemaApplyItem | SchemaIssueItem;
 
-const SOURCE_LABEL: Record<SchemaDetail['source'], string> = {
+export const SOURCE_LABEL: Record<SchemaDetail['source'], string> = {
   project: 'project',
   user: 'user',
   package: 'built-in',
@@ -15,6 +15,16 @@ export function isEditableSchema(schema: SchemaDetail): boolean {
   return schema.source !== 'package' && !!schema.dirPath;
 }
 
+/** "Forked from spec-driven (built-in, v1) on 2026-11-07. …" */
+export function describeLineage(lineage: SchemaLineage): string {
+  const version = lineage.version !== undefined ? `, v${lineage.version}` : '';
+  const date = lineage.forkedAt ? ` on ${lineage.forkedAt}` : '';
+  let text = `Forked from **${lineage.schema}** (${SOURCE_LABEL[lineage.source]}${version})${date}.`;
+  if (lineage.available === false) text += ' The source can no longer be found.';
+  else if (lineage.updated) text += ` The source is now at v${lineage.sourceVersion}.`;
+  return text;
+}
+
 export class SchemaItem extends vscode.TreeItem {
   constructor(public readonly schema: SchemaDetail) {
     super(
@@ -23,10 +33,14 @@ export class SchemaItem extends vscode.TreeItem {
         ? vscode.TreeItemCollapsibleState.Collapsed
         : vscode.TreeItemCollapsibleState.None
     );
+    // Stable across refreshes, so a freshly built item can be revealed.
+    this.id = `schema:${schema.name}`;
+    const lineage = schema.forkedFrom;
 
     const errors = schema.issues.filter((i) => i.level === 'error').length;
     const parts = [SOURCE_LABEL[schema.source]];
     if (schema.isDefault) parts.push('default');
+    if (lineage) parts.push(`fork of ${lineage.schema}${lineage.updated ? ' (source updated)' : ''}`);
     if (schema.artifacts.length) parts.push(`${schema.artifacts.length} artifacts`);
     if (errors) parts.push(`${errors} error${errors === 1 ? '' : 's'}`);
     this.description = parts.join(' · ');
@@ -35,6 +49,7 @@ export class SchemaItem extends vscode.TreeItem {
     tooltip.appendMarkdown(`**${schema.name}**${schema.version ? ` (v${schema.version})` : ''}\n\n`);
     if (schema.description) tooltip.appendMarkdown(`${schema.description}\n\n`);
     tooltip.appendMarkdown(`Source: ${SOURCE_LABEL[schema.source]}${schema.isDefault ? ' · project default' : ''}\n\n`);
+    if (lineage) tooltip.appendMarkdown(`${describeLineage(lineage)}\n\n`);
     if (schema.artifacts.length) {
       tooltip.appendMarkdown(`Pipeline: ${schema.artifacts.map((a) => a.id).join(' → ')}\n\n`);
     }
@@ -55,8 +70,10 @@ export class SchemaItem extends vscode.TreeItem {
       this.iconPath = new vscode.ThemeIcon(schema.source === 'package' ? 'package' : 'symbol-structure');
     }
 
-    // e.g. "schema.project", "schema.user.default", "schema.package"
-    this.contextValue = `schema.${schema.source}${schema.isDefault ? '.default' : ''}${schema.dirPath ? '' : '.unresolved'}`;
+    // e.g. "schema.project", "schema.user.default", "schema.project.default.fork", "schema.package.unresolved"
+    this.contextValue =
+      `schema.${schema.source}${schema.isDefault ? '.default' : ''}` +
+      `${lineage && schema.dirPath ? '.fork' : ''}${schema.dirPath ? '' : '.unresolved'}`;
 
     if (schema.schemaPath) {
       this.command = {
@@ -116,13 +133,19 @@ export class SchemaApplyItem extends vscode.TreeItem {
 }
 
 export class SchemaIssueItem extends vscode.TreeItem {
-  constructor(public readonly issue: SchemaIssue) {
+  constructor(
+    public readonly issue: SchemaIssue,
+    public readonly schema: SchemaDetail
+  ) {
     super(issue.message, vscode.TreeItemCollapsibleState.None);
     this.iconPath = new vscode.ThemeIcon(
       issue.level === 'error' ? 'error' : 'warning',
       new vscode.ThemeColor(issue.level === 'error' ? 'problemsErrorIcon.foreground' : 'problemsWarningIcon.foreground')
     );
     this.contextValue = 'schemaIssue';
+    if (schema.schemaPath) {
+      this.command = { command: 'openspec.schema.openDefinition', title: 'Show in schema.yaml', arguments: [this] };
+    }
   }
 }
 
@@ -143,6 +166,18 @@ export class SchemasTreeProvider implements vscode.TreeDataProvider<SchemaTreeEl
     return element;
   }
 
+  /** Builds the root item for a schema, for revealing it in the view. */
+  public itemFor(name: string): SchemaItem | undefined {
+    const schema = this.store.getSchema(name);
+    return schema ? new SchemaItem(schema) : undefined;
+  }
+
+  public getParent(element: SchemaTreeElement): SchemaItem | undefined {
+    if (element instanceof SchemaItem) return undefined;
+    const schema = this.store.getSchema(element.schema.name) ?? element.schema;
+    return new SchemaItem(schema);
+  }
+
   public getChildren(element?: SchemaTreeElement): vscode.ProviderResult<SchemaTreeElement[]> {
     if (!element) {
       const state = this.store.getState();
@@ -156,7 +191,7 @@ export class SchemasTreeProvider implements vscode.TreeDataProvider<SchemaTreeEl
 
     if (element instanceof SchemaItem) {
       const { schema } = element;
-      const children: SchemaTreeElement[] = schema.issues.map((i) => new SchemaIssueItem(i));
+      const children: SchemaTreeElement[] = schema.issues.map((i) => new SchemaIssueItem(i, schema));
       children.push(...schema.artifacts.map((a) => new SchemaArtifactItem(a, schema)));
       if (schema.apply) children.push(new SchemaApplyItem(schema));
       return children;

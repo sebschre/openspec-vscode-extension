@@ -107,6 +107,27 @@ export interface SchemaApplyPhase {
 export interface SchemaIssue {
   level: 'error' | 'warning';
   message: string;
+  /** Artifact the problem concerns, used to place it in `schema.yaml`. */
+  artifactId?: string;
+  /** True when the problem concerns the apply phase. */
+  apply?: boolean;
+}
+
+/** Where a forked schema was copied from, as recorded in its `.forked-from.yaml`. */
+export interface SchemaLineage {
+  schema: string;
+  source: SchemaSource;
+  /** Version the source declared when it was forked. */
+  version?: number;
+  forkedAt?: string;
+  /** Set by the store: whether the source can still be resolved. */
+  available?: boolean;
+  /** Set by the store: the source's directory, when available. */
+  sourcePath?: string;
+  /** Set by the store: the source's current version, when available. */
+  sourceVersion?: number;
+  /** Set by the store: true when the source now declares a higher version. */
+  updated?: boolean;
 }
 
 export interface SchemaDetail {
@@ -127,6 +148,8 @@ export interface SchemaDetail {
   usedByChanges: string[];
   /** Structural problems found while loading the schema. */
   issues: SchemaIssue[];
+  /** Present when the schema was forked by the extension. */
+  forkedFrom?: SchemaLineage;
 }
 
 export interface WorkspaceState {

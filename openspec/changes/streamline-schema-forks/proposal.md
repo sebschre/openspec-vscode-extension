@@ -6,6 +6,7 @@ Customizing a schema works, but the steps around the fork take effort. The "make
 
 ## What Changes
 
+- **No accidental overrides**: a new or renamed project schema can't take a name already used by a user or built-in schema.
 - **Default choice inside the fork flow**: after naming the copy, the user picks whether new changes should use it. The "Use for new changes" option comes first when the source is the current default.
 - **Reveal the new fork**: the new schema is selected and expanded in the Schemas view.
 - **Fork lineage**: a fork records its source schema (name, location, version). The tree shows "forked from …", flags when the source has a newer version, and offers **Compare with Original** to diff any changed file against the source.

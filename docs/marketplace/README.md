@@ -29,11 +29,13 @@ Click a change or spec to open a rich, interactive view of it:
 
 A schema decides which artifacts a change produces and in what order. From the **Schemas** view you can:
 
-- **Customize a schema**: fork the built-in `spec-driven` schema (or a user schema) into `openspec/schemas/` and make it your own.
+- **Customize a schema**: fork the built-in `spec-driven` schema (or a user schema) into `openspec/schemas/` and make it your own. You choose right away whether new changes should use the copy, and the copy is selected in the tree when it is created.
+- **Compare with Original**: a fork remembers where it came from, so you can diff any file against its source. The tree flags a fork when its source has a newer version.
 - **Create a schema** from scratch with the artifacts you need.
 - **Add or remove artifacts** and **edit their dependencies**. Dependency cycles are caught before anything is written.
-- **Open templates** for each artifact with a single click.
-- **Validate** a schema, and see structural problems right in the tree.
+- **Open templates** for each artifact with a single click, or jump to an artifact's definition in `schema.yaml` to edit its instruction.
+- **Validate** a schema, and see structural problems in the tree and in the Problems panel.
+- **Rename or delete** project schemas. The project default and active changes that use a schema are kept consistent.
 - **Set the project default** that new changes will use.
 
 ### Agent-friendly actions
@@ -58,7 +60,7 @@ A schema decides which artifacts a change produces and in what order. From the *
 
 ## Commands
 
-All commands are in the Command Palette under **OpenSpec:**: *New Change*, *Open Visual Spec Viewer*, *Validate Change*, *Archive Change*, *Refresh Specs & Changes*, *Open Dedicated Terminal*, *Customize Schema*, *New Schema*, *Validate Schema*, *Set as Project Default Schema*, *Add Artifact to Schema*.
+All commands are in the Command Palette under **OpenSpec:**: *New Change*, *Open Visual Spec Viewer*, *Validate Change*, *Archive Change*, *Refresh Specs & Changes*, *Open Dedicated Terminal*, *Customize Schema*, *New Schema*, *Validate Schema*, *Set as Project Default Schema*, *Add Artifact to Schema*, *Compare with Original*, *Rename Schema*, *Delete Schema*.
 
 ## Feedback
 

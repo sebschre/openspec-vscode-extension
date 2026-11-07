@@ -5,18 +5,74 @@ import { OpenSpecCliBridge } from '../core/cli';
 import {
   SCHEMA_NAME_PATTERN,
   addArtifact,
+  compareSchemaDirs,
+  defaultAfterDelete,
+  findApplyLine,
+  findArtifactLine,
+  findChangesNamingSchema,
+  findIssueLine,
   forkSchema,
   removeArtifact,
+  renameSchema,
   setArtifactRequires,
   writeDefaultSchema,
 } from '../core/schemas';
 import { SchemaDetail } from '../core/types';
-import { isEditableSchema } from '../views/tree/schemasTreeProvider';
+import { SOURCE_LABEL, isEditableSchema } from '../views/tree/schemasTreeProvider';
 
 const BUILTIN_ARTIFACTS = ['proposal', 'specs', 'design', 'tasks'];
+/** Read-only scheme serving empty documents, for diffing added or removed files. */
+const EMPTY_SCHEME = 'openspec-empty';
+
+export interface SchemaCommandOptions {
+  /** Selects and expands a schema in the Schemas view. */
+  revealSchema?: (name: string) => Thenable<void> | void;
+}
 
 function validateKebab(value: string): string | undefined {
   return SCHEMA_NAME_PATTERN.test(value.trim()) ? undefined : 'Use kebab-case, e.g. my-workflow';
+}
+
+/**
+ * Validates the name for a new or renamed project schema. Names already used
+ * anywhere are refused, so a copy never silently overrides another schema.
+ */
+function validateNewSchemaName(store: OpenSpecStateStore, value: string, current?: string): string | undefined {
+  const name = value.trim();
+  const invalid = validateKebab(name);
+  if (invalid || name === current) return invalid;
+  const existing = store.getState().schemas.find((s) => s.name === name);
+  if (!existing) return undefined;
+  return existing.source === 'project'
+    ? 'A project schema with this name already exists'
+    : `A ${SOURCE_LABEL[existing.source]} schema is already named "${name}". Pick another name so both stay available.`;
+}
+
+export interface DefaultChoice extends vscode.QuickPickItem {
+  makeDefault: boolean;
+}
+
+/**
+ * Options for "should new changes use the fork?". Forking the current default
+ * usually means replacing it, so that option comes first in that case.
+ */
+export function forkDefaultChoices(sourceIsDefault: boolean, newName: string, currentDefault: string): DefaultChoice[] {
+  const use: DefaultChoice = {
+    label: `Use "${newName}" for new changes`,
+    description: `replaces "${currentDefault}" as the project default`,
+    makeDefault: true,
+  };
+  const keep: DefaultChoice = {
+    label: `Keep "${currentDefault}" as the project default`,
+    description: 'you can switch later from the Schemas view',
+    makeDefault: false,
+  };
+  return sourceIsDefault ? [use, keep] : [keep, use];
+}
+
+function originLabel(schema: SchemaDetail): string {
+  const lineage = schema.forkedFrom!;
+  return `"${lineage.schema}" (${SOURCE_LABEL[lineage.source]})`;
 }
 
 /** Resolves the schema a command targets: a tree item, a name, or a quick pick. */
@@ -54,11 +110,23 @@ export function registerSchemaCommands(
   context: vscode.ExtensionContext,
   store: OpenSpecStateStore,
   cli: OpenSpecCliBridge,
-  outputChannel: vscode.OutputChannel
+  outputChannel: vscode.OutputChannel,
+  options: SchemaCommandOptions = {}
 ) {
   const root = store.getWorkspaceRoot();
   const register = (id: string, handler: (...args: any[]) => any) =>
     context.subscriptions.push(vscode.commands.registerCommand(id, handler));
+  const reveal = async (name: string) => {
+    try {
+      await options.revealSchema?.(name);
+    } catch {
+      // the view may be hidden; revealing is best effort
+    }
+  };
+
+  context.subscriptions.push(
+    vscode.workspace.registerTextDocumentContentProvider(EMPTY_SCHEME, { provideTextDocumentContent: () => '' })
+  );
 
   register('openspec.schema.openFile', async (filePath?: string) => {
     if (!filePath) return;
@@ -76,33 +144,183 @@ export function registerSchemaCommands(
       return;
     }
 
-    const name = await vscode.window.showInputBox({
-      title: `Customize "${source.name}"`,
+    const title = `Customize "${source.name}"`;
+    const input = await vscode.window.showInputBox({
+      title: `${title} (1/2)`,
       prompt: 'Name for the project-local copy (stored in openspec/schemas/)',
       value: source.source === 'project' ? `${source.name}-copy` : `${source.name}-custom`,
-      validateInput: (v) =>
-        validateKebab(v) ?? (store.getState().schemas.some((s) => s.name === v.trim() && s.source === 'project')
-          ? 'A project schema with this name already exists'
-          : undefined),
+      validateInput: (v) => validateNewSchemaName(store, v),
     });
-    if (!name) return;
+    if (!input) return;
+    const name = input.trim();
+
+    const currentDefault = store.getState().defaultSchema;
+    const choice = await vscode.window.showQuickPick(forkDefaultChoices(source.isDefault, name, currentDefault), {
+      title: `${title} (2/2)`,
+      placeHolder: 'Which schema should new changes use?',
+    });
+    if (!choice) return;
 
     try {
-      const dest = forkSchema(source.dirPath, root, name.trim());
+      const dest = forkSchema(source.dirPath, root, name, {
+        schema: source.name,
+        source: source.source,
+        version: source.version,
+      });
+      if (choice.makeDefault) writeDefaultSchema(root, name);
       await store.refresh();
+      await reveal(name);
       const action = await vscode.window.showInformationMessage(
-        `Schema "${name.trim()}" created from "${source.name}".`,
-        'Set as Default',
+        `Schema "${name}" created from "${source.name}"${choice.makeDefault ? ' and set as the project default' : ''}.`,
         'Open schema.yaml'
       );
-      if (action === 'Set as Default') {
-        await vscode.commands.executeCommand('openspec.schema.setDefault', name.trim());
-      } else if (action === 'Open schema.yaml') {
+      if (action === 'Open schema.yaml') {
         await vscode.commands.executeCommand('openspec.schema.openFile', path.join(dest, 'schema.yaml'));
       }
     } catch (err) {
       reportError(err);
     }
+  });
+
+  register('openspec.schema.compareWithOriginal', async (arg?: any) => {
+    const schema = await resolveSchema(store, arg, (s) => !!s.forkedFrom && !!s.dirPath, 'Select a fork to compare');
+    if (!schema) return;
+    const lineage = schema.forkedFrom;
+    if (!lineage) {
+      vscode.window.showInformationMessage(`"${schema.name}" was not forked by OpenSpec for VS Code, so its source is unknown.`);
+      return;
+    }
+    if (!lineage.available || !lineage.sourcePath) {
+      const hint = lineage.source === 'package' ? ' Install the OpenSpec CLI and refresh if it is missing.' : '';
+      vscode.window.showWarningMessage(`The source ${originLabel(schema)} of "${schema.name}" can no longer be found.${hint}`);
+      return;
+    }
+
+    const diffs = compareSchemaDirs(schema.dirPath, lineage.sourcePath);
+    if (diffs.length === 0) {
+      vscode.window.showInformationMessage(`"${schema.name}" has no changes compared with ${originLabel(schema)}.`);
+      return;
+    }
+    const upstream = lineage.updated
+      ? ` · the source moved from v${lineage.version} to v${lineage.sourceVersion}, so upstream changes show too`
+      : '';
+    const picked = await vscode.window.showQuickPick(
+      diffs.map((d) => ({ label: d.path, description: d.status, diff: d })),
+      {
+        title: `Compare "${schema.name}" with ${originLabel(schema)}`,
+        placeHolder: `${diffs.length} file${diffs.length === 1 ? ' differs' : 's differ'}${upstream}`,
+      }
+    );
+    if (!picked) return;
+
+    const { diff } = picked;
+    const empty = vscode.Uri.from({ scheme: EMPTY_SCHEME, path: `/${diff.path}` });
+    const left = diff.status === 'added' ? empty : vscode.Uri.file(path.join(lineage.sourcePath, diff.path));
+    const right = diff.status === 'removed' ? empty : vscode.Uri.file(path.join(schema.dirPath, diff.path));
+    await vscode.commands.executeCommand(
+      'vscode.diff',
+      left,
+      right,
+      `${diff.path}: ${lineage.schema} ↔ ${schema.name}`
+    );
+  });
+
+  register('openspec.schema.rename', async (arg?: any) => {
+    const schema = await resolveSchema(store, arg, (s) => s.source === 'project', 'Select a project schema to rename');
+    if (!schema) return;
+    if (schema.source !== 'project') {
+      vscode.window.showWarningMessage('Only project schemas can be renamed.');
+      return;
+    }
+    const input = await vscode.window.showInputBox({
+      title: `Rename "${schema.name}"`,
+      prompt: 'New name. The project default and active changes that use this schema are updated too.',
+      value: schema.name,
+      validateInput: (v) => validateNewSchemaName(store, v, schema.name),
+    });
+    const name = input?.trim();
+    if (!name || name === schema.name) return;
+
+    try {
+      const result = renameSchema(root, schema.name, name);
+      await store.refresh();
+      await reveal(name);
+      const updates: string[] = [];
+      if (result.defaultUpdated) updates.push('the project default');
+      if (result.updatedChanges.length) {
+        const n = result.updatedChanges.length;
+        updates.push(`${n} change${n === 1 ? '' : 's'} (${result.updatedChanges.join(', ')})`);
+      }
+      vscode.window.showInformationMessage(
+        `Renamed "${schema.name}" to "${name}".${updates.length ? ` Updated ${updates.join(' and ')}.` : ''}`
+      );
+    } catch (err) {
+      reportError(err);
+    }
+  });
+
+  register('openspec.schema.delete', async (arg?: any) => {
+    const schema = await resolveSchema(store, arg, (s) => s.source === 'project', 'Select a project schema to delete');
+    if (!schema) return;
+    if (schema.source !== 'project' || !schema.dirPath) {
+      vscode.window.showWarningMessage('Only project schemas can be deleted.');
+      return;
+    }
+
+    const nextDefault = schema.isDefault ? defaultAfterDelete(schema) : undefined;
+    const named = findChangesNamingSchema(root, schema.name).map((c) => c.name);
+    const detail = ['Its folder is moved to the trash.'];
+    if (nextDefault && nextDefault !== schema.name) {
+      detail.push(`It is the project default. New changes will use "${nextDefault}" instead.`);
+    }
+    if (named.length) {
+      const fallback = schema.shadows.length
+        ? `will use the ${SOURCE_LABEL[schema.shadows[0]]} schema of the same name`
+        : 'will not find their schema until you change it';
+      detail.push(`Active changes that use it ${fallback}: ${named.join(', ')}.`);
+    }
+    const confirm = await vscode.window.showWarningMessage(
+      `Delete schema "${schema.name}"?`,
+      { modal: true, detail: detail.join('\n\n') },
+      'Move to Trash'
+    );
+    if (confirm !== 'Move to Trash') return;
+
+    const uri = vscode.Uri.file(schema.dirPath);
+    try {
+      try {
+        await vscode.workspace.fs.delete(uri, { recursive: true, useTrash: true });
+      } catch {
+        const permanent = await vscode.window.showWarningMessage(
+          `"${schema.name}" could not be moved to the trash. Delete it permanently?`,
+          { modal: true },
+          'Delete Permanently'
+        );
+        if (permanent !== 'Delete Permanently') return;
+        await vscode.workspace.fs.delete(uri, { recursive: true, useTrash: false });
+      }
+      if (nextDefault && nextDefault !== schema.name) writeDefaultSchema(root, nextDefault);
+      await store.refresh();
+      vscode.window.showInformationMessage(
+        `Deleted schema "${schema.name}".${nextDefault && nextDefault !== schema.name ? ` The project default is now "${nextDefault}".` : ''}`
+      );
+    } catch (err) {
+      reportError(err);
+    }
+  });
+
+  register('openspec.schema.openDefinition', async (item?: any) => {
+    const schema: SchemaDetail | undefined = item?.schema;
+    if (!schema?.schemaPath) return;
+    const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(schema.schemaPath));
+    const text = doc.getText();
+    const line = item.artifact
+      ? findArtifactLine(text, item.artifact.id)
+      : item.issue
+        ? findIssueLine(text, item.issue)
+        : findApplyLine(text);
+    const position = new vscode.Position(Math.max(line, 0), 0);
+    await vscode.window.showTextDocument(doc, { selection: new vscode.Range(position, position) });
   });
 
   register('openspec.schema.new', async () => {

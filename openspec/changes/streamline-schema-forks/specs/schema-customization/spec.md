@@ -20,6 +20,10 @@ The extension SHALL let the user copy any resolvable schema into `openspec/schem
 - **WHEN** a project schema with the entered name already exists
 - **THEN** the fork is refused and nothing is overwritten
 
+#### Scenario: Name of another schema
+- **WHEN** the entered name is already used by a user or built-in schema
+- **THEN** the name is refused with an explanation, so a copy never silently overrides another schema
+
 ## ADDED Requirements
 
 ### Requirement: Fork Lineage
@@ -60,7 +64,7 @@ The extension SHALL let the user delete and rename project schemas. User and bui
 #### Scenario: Renaming a schema
 - **WHEN** the user renames project schema `team-flow` to `lean-flow`
 - **THEN** the folder and the `name:` field become `lean-flow`, the project default follows if it was `team-flow`, and active changes whose metadata names `team-flow` are updated to `lean-flow`
-- **AND** a name already used by a project schema is rejected
+- **AND** a name already used by any project, user or built-in schema is rejected
 
 ### Requirement: Open Artifact Definition
 The extension SHALL let the user open a schema's `schema.yaml` with the cursor on a given artifact's entry, or on the apply phase, for any schema whose files can be located.

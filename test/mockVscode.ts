@@ -5,6 +5,7 @@ export enum TreeItemCollapsibleState {
 }
 
 export class TreeItem {
+  public id?: string;
   public label?: string;
   public collapsibleState?: TreeItemCollapsibleState;
   public description?: string;
@@ -67,6 +68,12 @@ export const Uri = {
     path: fsPath,
     scheme: 'file',
     toString: () => `file://${fsPath}`,
+  }),
+  from: (parts: { scheme: string; path: string }) => ({
+    fsPath: parts.path,
+    path: parts.path,
+    scheme: parts.scheme,
+    toString: () => `${parts.scheme}:${parts.path}`,
   }),
   joinPath: (base: any, ...paths: string[]) => ({
     fsPath: [base.fsPath, ...paths].join('/'),
@@ -231,6 +238,62 @@ export const workspace = {
   }),
   openTextDocument: async (_uri: any) => ({}),
   showTextDocument: async (_doc: any) => ({}),
+  registerTextDocumentContentProvider: (_scheme: string, _provider: any) => ({ dispose: () => {} }),
+  fs: {
+    deleted: [] as { uri: any; options: any }[],
+    delete: async (uri: any, options?: any) => {
+      workspace.fs.deleted.push({ uri, options });
+    },
+  },
+};
+
+export class Position {
+  constructor(public line: number, public character: number) {}
+}
+
+export class Range {
+  public start: Position;
+  public end: Position;
+  constructor(startLine: any, startCharacter: any, endLine?: number, endCharacter?: number) {
+    if (startLine instanceof Position) {
+      this.start = startLine;
+      this.end = startCharacter;
+    } else {
+      this.start = new Position(startLine, startCharacter);
+      this.end = new Position(endLine!, endCharacter!);
+    }
+  }
+}
+
+export enum DiagnosticSeverity {
+  Error = 0,
+  Warning = 1,
+  Information = 2,
+  Hint = 3,
+}
+
+export class Diagnostic {
+  public source?: string;
+  constructor(public range: Range, public message: string, public severity: DiagnosticSeverity) {}
+}
+
+export class MockDiagnosticCollection {
+  public entries = new Map<string, Diagnostic[]>();
+  public disposed = false;
+  constructor(public name: string) {}
+  set(uri: any, diagnostics: Diagnostic[]) {
+    this.entries.set(uri.fsPath, diagnostics);
+  }
+  clear() {
+    this.entries.clear();
+  }
+  dispose() {
+    this.disposed = true;
+  }
+}
+
+export const languages = {
+  createDiagnosticCollection: (name: string) => new MockDiagnosticCollection(name),
 };
 
 export class LanguageModelChatMessage {

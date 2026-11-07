@@ -7,6 +7,7 @@ import {
   SpecDetail,
   ArchiveItem,
   SchemaDetail,
+  SchemaSource,
   TaskItem,
 } from './types';
 import { OpenSpecParser } from './parser';
@@ -36,6 +37,7 @@ export class OpenSpecStateStore extends EventEmitter {
   private userSchemasDir: string;
   private schemaDiscovery?: SchemaDiscovery;
   private discoveredSchemas?: SchemaLocation[];
+  private schemaLocations: SchemaLocation[] = [];
 
   constructor(workspaceRoot: string, options: StoreOptions = {}) {
     super();
@@ -67,6 +69,14 @@ export class OpenSpecStateStore extends EventEmitter {
 
   public getSchema(name: string): SchemaDetail | undefined {
     return this.state.schemas.find((s) => s.name === name);
+  }
+
+  /**
+   * Finds a schema by name in one specific location, including locations
+   * shadowed by a higher-precedence schema of the same name.
+   */
+  public resolveSchemaLocation(name: string, source: SchemaSource): SchemaLocation | undefined {
+    return this.schemaLocations.find((l) => l.name === name && l.source === source);
   }
 
   /** Forces the next refresh to re-run CLI schema discovery. */
@@ -275,10 +285,14 @@ export class OpenSpecStateStore extends EventEmitter {
     const locations: SchemaLocation[] = [
       ...listSchemaDirs(getProjectSchemasDir(this.workspaceRoot), 'project'),
       ...listSchemaDirs(this.userSchemasDir, 'user'),
-      ...(this.discoveredSchemas || []),
+      // Project and user schemas are scanned live above; the cached CLI result is
+      // only trusted for built-ins, so deleted or renamed schemas don't linger.
+      ...(this.discoveredSchemas || []).filter((l) => l.source === 'package'),
     ];
 
+    this.schemaLocations = locations;
     const schemas = mergeSchemaLocations(locations).map((loc) => loadSchema(loc, loc.shadows));
+    for (const schema of schemas) this.resolveLineage(schema);
 
     // The built-in schema always exists for the CLI, even when we could not locate it.
     if (!schemas.some((s) => s.name === DEFAULT_SCHEMA)) {
@@ -301,6 +315,19 @@ export class OpenSpecStateStore extends EventEmitter {
       schema.usedByChanges = changes.filter((c) => c.schema === schema.name).map((c) => c.name);
     }
     return schemas;
+  }
+
+  /** Fills in whether a fork's source still resolves and whether it has moved on. */
+  private resolveLineage(schema: SchemaDetail): void {
+    const lineage = schema.forkedFrom;
+    if (!lineage) return;
+    const loc = this.resolveSchemaLocation(lineage.schema, lineage.source);
+    lineage.available = !!loc && loc.path !== schema.dirPath && fs.existsSync(path.join(loc.path, 'schema.yaml'));
+    if (!loc || !lineage.available) return;
+    lineage.sourcePath = loc.path;
+    lineage.sourceVersion = loadSchema(loc).version;
+    lineage.updated =
+      lineage.version !== undefined && lineage.sourceVersion !== undefined && lineage.sourceVersion > lineage.version;
   }
 
   private scanArchive(openspecDir: string): ArchiveItem[] {

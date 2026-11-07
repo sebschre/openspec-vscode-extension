@@ -180,6 +180,30 @@
         "icon": "$(references)"
       },
       {
+        "command": "openspec.schema.compareWithOriginal",
+        "title": "Compare with Original",
+        "category": "OpenSpec",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "openspec.schema.rename",
+        "title": "Rename Schema",
+        "category": "OpenSpec",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "openspec.schema.delete",
+        "title": "Delete Schema",
+        "category": "OpenSpec",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "openspec.schema.openDefinition",
+        "title": "Open Definition in schema.yaml",
+        "category": "OpenSpec",
+        "icon": "$(go-to-file)"
+      },
+      {
         "command": "openspec.schema.openFile",
         "title": "Open Schema File",
         "category": "OpenSpec"
@@ -256,7 +280,7 @@
         },
         {
           "command": "openspec.schema.fork",
-          "when": "view == openspec.views.schemas && viewItem =~ /^schema\\.(user|package)(\\.default)?$/",
+          "when": "view == openspec.views.schemas && viewItem =~ /^schema\\.(user|package)(\\.default)?(\\.fork)?$/",
           "group": "inline@1"
         },
         {
@@ -266,7 +290,7 @@
         },
         {
           "command": "openspec.schema.validate",
-          "when": "view == openspec.views.schemas && viewItem =~ /^schema\\.[a-z]+(\\.default)?$/",
+          "when": "view == openspec.views.schemas && viewItem =~ /^schema\\.[a-z]+(\\.default)?(\\.fork)?$/",
           "group": "inline@2"
         },
         {
@@ -276,8 +300,33 @@
         },
         {
           "command": "openspec.schema.setDefault",
-          "when": "view == openspec.views.schemas && viewItem =~ /^schema\\.[a-z]+(\\.unresolved)?$/",
+          "when": "view == openspec.views.schemas && viewItem =~ /^schema\\.[a-z]+(\\.fork|\\.unresolved)?$/",
           "group": "1_schema@2"
+        },
+        {
+          "command": "openspec.schema.compareWithOriginal",
+          "when": "view == openspec.views.schemas && viewItem =~ /\\.fork$/",
+          "group": "inline@3"
+        },
+        {
+          "command": "openspec.schema.compareWithOriginal",
+          "when": "view == openspec.views.schemas && viewItem =~ /\\.fork$/",
+          "group": "1_schema@3"
+        },
+        {
+          "command": "openspec.schema.rename",
+          "when": "view == openspec.views.schemas && viewItem =~ /^schema\\.project/",
+          "group": "3_manage@1"
+        },
+        {
+          "command": "openspec.schema.delete",
+          "when": "view == openspec.views.schemas && viewItem =~ /^schema\\.project/",
+          "group": "3_manage@2"
+        },
+        {
+          "command": "openspec.schema.openDefinition",
+          "when": "view == openspec.views.schemas && (viewItem =~ /^schemaArtifact/ || viewItem == schemaApply)",
+          "group": "inline@0"
         },
         {
           "command": "openspec.schema.editRequires",
@@ -293,6 +342,10 @@
       "commandPalette": [
         {
           "command": "openspec.schema.openFile",
+          "when": "false"
+        },
+        {
+          "command": "openspec.schema.openDefinition",
           "when": "false"
         },
         {

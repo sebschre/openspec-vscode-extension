@@ -3,13 +3,14 @@ import { OpenSpecStateStore } from '../core/store';
 import { OpenSpecCliBridge } from '../core/cli';
 import { TerminalManager } from '../core/terminal';
 import { SpecViewerPanel } from '../views/webview/specViewerPanel';
-import { registerSchemaCommands } from './schemaCommands';
+import { SchemaCommandOptions, registerSchemaCommands } from './schemaCommands';
 
 export function registerCommands(
   context: vscode.ExtensionContext,
   store: OpenSpecStateStore,
   cli: OpenSpecCliBridge,
-  outputChannel: vscode.OutputChannel
+  outputChannel: vscode.OutputChannel,
+  schemaOptions: SchemaCommandOptions = {}
 ) {
   // Command: Refresh
   context.subscriptions.push(
@@ -237,7 +238,7 @@ export function registerCommands(
     })
   );
 
-  registerSchemaCommands(context, store, cli, outputChannel);
+  registerSchemaCommands(context, store, cli, outputChannel, schemaOptions);
 
   // Command: Reset Dedicated Terminal Session
   context.subscriptions.push(
