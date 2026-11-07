@@ -4,6 +4,13 @@ All notable changes to this extension are documented here. This file is maintain
 automatically by [release-please](https://github.com/googleapis/release-please) from
 [Conventional Commits](https://www.conventionalcommits.org/).
 
+## [0.4.1](https://github.com/sebschre/openspec-vscode-extension/compare/v0.4.0...v0.4.1) (2026-11-07)
+
+
+### Bug Fixes
+
+* reuse schema names whose folder was left empty after a revert ([#17](https://github.com/sebschre/openspec-vscode-extension/issues/17)) ([9110161](https://github.com/sebschre/openspec-vscode-extension/commit/911016180781ea82c297df170bbe6ec3693ad5e5))
+
 ## [0.4.0](https://github.com/sebschre/openspec-vscode-extension/compare/v0.3.0...v0.4.0) (2026-11-07)
 
 
