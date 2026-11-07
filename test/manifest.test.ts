@@ -98,4 +98,30 @@ describe('Extension manifest consistency', () => {
       ['schemaArtifact', 'schemaArtifact.editable', 'schemaApply']
     );
   });
+
+  it('switches inline change actions on completion and keeps the context menu for both', () => {
+    const values = ['change', 'change.complete', 'changeArtifact', 'spec'];
+    assert.deepStrictEqual(itemsShowing('openspec.archive', 'inline', values), ['change.complete']);
+    assert.deepStrictEqual(itemsShowing('openspec.validate', 'inline', values), ['change']);
+    for (const command of ['openspec.validate', 'openspec.archive', 'openspec.syncSpecs']) {
+      assert.deepStrictEqual(itemsShowing(command, '1_actions', values), ['change', 'change.complete']);
+    }
+    assert.deepStrictEqual(itemsShowing('openspec.openSpecFile', 'inline', values), ['spec']);
+    assert.deepStrictEqual(itemsShowing('openspec.openViewer', 'inline', values), ['change', 'change.complete', 'spec']);
+  });
+
+  it('contributes welcome views for empty Active Changes and Living Specs views', () => {
+    const welcome = pkg.contributes.viewsWelcome as { view: string; contents: string; when: string }[];
+    for (const view of ['openspec.views.changes', 'openspec.views.specs']) {
+      const entries = welcome.filter((w) => w.view === view);
+      assert.deepStrictEqual(entries.map((w) => w.when).sort(), ['!openspec.hasRoot', 'openspec.hasRoot']);
+    }
+    for (const entry of welcome) {
+      for (const match of entry.contents.matchAll(/\(command:([\w.]+)\)/g)) {
+        assert.ok(declared.has(match[1]), `welcome view links undeclared command ${match[1]}`);
+      }
+    }
+    const changesEmpty = welcome.find((w) => w.view === 'openspec.views.changes' && w.when === 'openspec.hasRoot')!;
+    assert.match(changesEmpty.contents, /\(command:openspec\.newChange\)/);
+  });
 });

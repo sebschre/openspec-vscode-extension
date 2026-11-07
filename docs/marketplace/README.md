@@ -10,8 +10,8 @@ The OpenSpec Activity Bar icon opens four views:
 
 | View | What it shows |
 | --- | --- |
-| **Active Changes** | Every change in `openspec/changes/` with its schema, artifact status, and task progress (`● 4/18 (22%)`). |
-| **Living Specs** | The durable capability specs in `openspec/specs/`, expandable down to requirements and scenarios. |
+| **Active Changes** | Every change in `openspec/changes/` with its task progress and next open task (`4/18 (22%) · next: 2.1 Add parser`). Expand a change to see the artifacts its schema defines. Missing artifacts are marked, delta specs show their `+ ~ −` requirement counts, and tasks are grouped by section. The view's badge shows how many changes are active. |
+| **Living Specs** | The durable capability specs in `openspec/specs/`, expandable down to requirements and scenarios. Click a requirement or scenario to jump to it in `spec.md`. Specs that an active change is about to modify are highlighted and list those pending changes. |
 | **Archive** | Completed changes, with their proposal, design, tasks, and delta specs. |
 | **Schemas** | The workflow schemas available to the project (project, user, and built-in), their artifacts, and how those artifacts depend on each other. |
 
@@ -43,7 +43,7 @@ A schema decides which artifacts a change produces and in what order. From the *
 - **New Change** guided form: describe the change and the extension scaffolds it, using your chosen schema.
 - **Run in Dedicated Terminal**: send OpenSpec slash commands to your coding agent (Claude Code, Gemini CLI, Antigravity, Codex, …) in a reusable terminal.
 - **Copy AI prompt**: get a ready-to-paste prompt for the next unfinished task.
-- **Validate** and **Archive** changes with the OpenSpec CLI.
+- **Validate** and **Archive** changes with the OpenSpec CLI. A change gets an inline Archive button as soon as it is complete, and an inline Validate button until then.
 
 ## Getting started
 

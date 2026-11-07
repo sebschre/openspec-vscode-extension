@@ -68,6 +68,10 @@ Expanding an active change SHALL list the artifacts defined by the change's work
 - **WHEN** a change has no `design.md`
 - **THEN** the Design item is labelled as missing, its tooltip names the file to create, and clicking it opens nothing
 
+#### Scenario: Completion on a custom schema
+- **WHEN** a change on a custom schema has every artifact the schema defines and all of its tasks are done
+- **THEN** the change is shown as complete, even if it has no proposal, design or delta specs
+
 ### Requirement: Delta Spec Breakdown
 The specs artifact of an active change SHALL be expandable into one item per delta capability, each showing the number of added, modified, removed and renamed requirements, and opening its delta spec file when clicked.
 

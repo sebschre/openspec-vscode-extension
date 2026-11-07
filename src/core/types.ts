@@ -12,6 +12,8 @@ export interface ScenarioItem {
   when: string;
   then: string;
   rawText: string;
+  /** Zero-based line of the `#### Scenario:` heading. */
+  lineIndex?: number;
 }
 
 export type RequirementOperation = 'ADDED' | 'MODIFIED' | 'REMOVED' | 'RENAMED' | 'STANDARD';
@@ -21,6 +23,8 @@ export interface RequirementItem {
   description: string;
   operation: RequirementOperation;
   scenarios: ScenarioItem[];
+  /** Zero-based line of the `### Requirement:` heading. */
+  lineIndex?: number;
 }
 
 export interface SpecDetail {
@@ -30,6 +34,8 @@ export interface SpecDetail {
   requirements: RequirementItem[];
   isArchived?: boolean;
   archiveName?: string;
+  /** Names of active changes with a delta spec for this capability (living specs only). */
+  pendingChanges?: string[];
 }
 
 export interface ProposalDetail {

@@ -13,6 +13,7 @@
 ## Decisions
 
 - **Artifacts come from the change's schema.** The provider looks up `store.getSchema(change.schema)`. When the schema has artifacts, it uses them in order; otherwise it falls back to the built-in four (proposal, specs, design, tasks). Presence is checked against `generates`: a glob (contains `*`) counts as present when the directory before the first glob segment contains a matching file, otherwise the file must exist. The known ids `specs` and `tasks` get the expandable children; others are plain file items. This keeps custom schemas readable without parsing their templates.
+- **Completion follows the schema too.** When the change's schema artifacts are known, the store marks a change complete when all of them exist and, if the schema has a `tasks` artifact, every task is done. Otherwise the built-in rule stays. Without this, a change on a custom schema could never show the inline Archive action.
 - **Missing artifacts have no command.** They show a `circle-large-outline` icon, the description "missing" and a tooltip naming the file to create. Opening a missing file would create an empty unsaved editor at a path users didn't choose.
 - **Delta counts use the existing parsed operations.** Each delta spec child shows `+N ~N −N` (and `→N` for renames) built from `RequirementItem.operation`, omitting zero counts.
 - **Task groups come from `TaskItem.group`.** Groups keep file order. Each group item shows `done/total` and expands to its tasks, which open `tasks.md` at the task's line. The next task is the first incomplete task in file order.
