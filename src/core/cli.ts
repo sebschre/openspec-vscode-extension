@@ -112,15 +112,18 @@ export class OpenSpecCliBridge {
     try {
       const parsed = JSON.parse(OpenSpecCliBridge.extractJson(stdout));
       if (!Array.isArray(parsed)) return [];
-      return parsed
-        .filter(
-          (e: any) =>
-            e &&
-            typeof e.name === 'string' &&
-            typeof e.path === 'string' &&
-            ['project', 'user', 'package'].includes(e.source)
-        )
-        .map((e: any) => ({ name: e.name, source: e.source, path: e.path }));
+      const isLocation = (e: any) =>
+        e && typeof e.path === 'string' && ['project', 'user', 'package'].includes(e.source);
+      const locations: SchemaLocation[] = [];
+      for (const e of parsed) {
+        if (!isLocation(e) || typeof e.name !== 'string') continue;
+        locations.push({ name: e.name, source: e.source, path: e.path });
+        // Shadowed locations are kept so a fork named like its source can still find it.
+        for (const shadow of Array.isArray(e.shadows) ? e.shadows : []) {
+          if (isLocation(shadow)) locations.push({ name: e.name, source: shadow.source, path: shadow.path });
+        }
+      }
+      return locations;
     } catch {
       return [];
     }

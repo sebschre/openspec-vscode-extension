@@ -36,4 +36,66 @@ describe('Extension manifest consistency', () => {
       }
     }
   });
+
+  /** Evaluates the `viewItem` part of a Schemas view `when` clause for a context value. */
+  function showsFor(when: string, viewItem: string): boolean {
+    const expr = when
+      .replace(/view == [\w.]+ && /, '')
+      .replace(/viewItem =~ \/((?:\\\/|[^/])+)\//g, (_m, re) => `new RegExp(${JSON.stringify(re)}).test(v)`)
+      .replace(/viewItem == ([\w.]+)/g, (_m, value) => `v === ${JSON.stringify(value)}`);
+    return new Function('v', `return ${expr};`)(viewItem);
+  }
+
+  function itemsShowing(command: string, group: string, values: string[]): string[] {
+    const entry = pkg.contributes.menus['view/item/context'].find(
+      (e: any) => e.command === command && String(e.group).startsWith(group)
+    );
+    assert.ok(entry, `${command} has no ${group} menu entry`);
+    return values.filter((v) => showsFor(entry.when, v));
+  }
+
+  it('shows schema actions on the right Schemas view items', () => {
+    const schemaValues = [
+      'schema.project',
+      'schema.project.default',
+      'schema.project.fork',
+      'schema.project.default.fork',
+      'schema.user',
+      'schema.package',
+      'schema.package.default',
+      'schema.package.unresolved',
+    ];
+    assert.deepStrictEqual(itemsShowing('openspec.schema.compareWithOriginal', 'inline', schemaValues), [
+      'schema.project.fork',
+      'schema.project.default.fork',
+    ]);
+    for (const command of ['openspec.schema.rename', 'openspec.schema.delete']) {
+      assert.deepStrictEqual(itemsShowing(command, '3_manage', schemaValues), [
+        'schema.project',
+        'schema.project.default',
+        'schema.project.fork',
+        'schema.project.default.fork',
+      ]);
+    }
+    assert.deepStrictEqual(itemsShowing('openspec.schema.setDefault', '1_schema', schemaValues), [
+      'schema.project',
+      'schema.project.fork',
+      'schema.user',
+      'schema.package',
+      'schema.package.unresolved',
+    ]);
+    assert.deepStrictEqual(itemsShowing('openspec.schema.validate', 'inline', schemaValues), [
+      'schema.project',
+      'schema.project.default',
+      'schema.project.fork',
+      'schema.project.default.fork',
+      'schema.user',
+      'schema.package',
+      'schema.package.default',
+    ]);
+    assert.deepStrictEqual(
+      itemsShowing('openspec.schema.openDefinition', 'inline', ['schemaArtifact', 'schemaArtifact.editable', 'schemaApply', 'schemaIssue']),
+      ['schemaArtifact', 'schemaArtifact.editable', 'schemaApply']
+    );
+  });
 });

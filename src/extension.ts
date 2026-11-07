@@ -6,6 +6,7 @@ import { ChangesTreeProvider } from './views/tree/changesTreeProvider';
 import { SpecsTreeProvider } from './views/tree/specsTreeProvider';
 import { ArchiveTreeProvider } from './views/tree/archiveTreeProvider';
 import { SchemasTreeProvider } from './views/tree/schemasTreeProvider';
+import { SchemaDiagnostics } from './views/diagnostics/schemaDiagnostics';
 import { registerCommands } from './commands';
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -28,15 +29,23 @@ export async function activate(context: vscode.ExtensionContext) {
   const archiveProvider = new ArchiveTreeProvider(store);
   const schemasProvider = new SchemasTreeProvider(store);
 
+  const schemasView = vscode.window.createTreeView('openspec.views.schemas', { treeDataProvider: schemasProvider });
+
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider('openspec.views.changes', changesProvider),
     vscode.window.registerTreeDataProvider('openspec.views.specs', specsProvider),
     vscode.window.registerTreeDataProvider('openspec.views.archive', archiveProvider),
-    vscode.window.registerTreeDataProvider('openspec.views.schemas', schemasProvider)
+    schemasView,
+    new SchemaDiagnostics(store)
   );
 
   // Register Commands
-  registerCommands(context, store, cli, outputChannel);
+  registerCommands(context, store, cli, outputChannel, {
+    revealSchema: async (name) => {
+      const item = schemasProvider.itemFor(name);
+      if (item) await schemasView.reveal(item, { select: true, focus: true, expand: true });
+    },
+  });
 
   // Initial scan
   store.refresh().catch((err) => {

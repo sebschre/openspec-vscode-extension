@@ -7,6 +7,7 @@ import {
   SchemaArtifact,
   SchemaDetail,
   SchemaIssue,
+  SchemaLineage,
   SchemaSource,
 } from './types';
 
@@ -20,6 +21,8 @@ import {
 export const DEFAULT_SCHEMA = 'spec-driven';
 export const SCHEMA_NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const SOURCE_PRECEDENCE: SchemaSource[] = ['project', 'user', 'package'];
+/** Sidecar file in a forked schema's directory recording what it was forked from. */
+export const LINEAGE_FILE = '.forked-from.yaml';
 
 export interface SchemaLocation {
   name: string;
@@ -160,6 +163,8 @@ export function loadSchema(location: SchemaLocation, shadows: SchemaSource[] = [
   }
 
   detail.issues.push(...validateSchemaStructure(raw, detail));
+  const lineage = readLineage(location.path);
+  if (lineage) detail.forkedFrom = lineage;
   return detail;
 }
 
@@ -187,29 +192,45 @@ export function validateSchemaStructure(raw: any, detail: SchemaDetail): SchemaI
   const ids = new Set<string>();
   for (const a of detail.artifacts) {
     if (!a.id) issues.push({ level: 'error', message: 'An artifact is missing its id' });
-    else if (ids.has(a.id)) issues.push({ level: 'error', message: `Duplicate artifact id "${a.id}"` });
+    else if (ids.has(a.id)) issues.push({ level: 'error', message: `Duplicate artifact id "${a.id}"`, artifactId: a.id });
     ids.add(a.id);
-    if (!a.generates) issues.push({ level: 'error', message: `Artifact "${a.id}" is missing "generates"` });
-    if (!a.template) issues.push({ level: 'error', message: `Artifact "${a.id}" is missing "template"` });
+    if (!a.generates) {
+      issues.push({ level: 'error', message: `Artifact "${a.id}" is missing "generates"`, artifactId: a.id });
+    }
+    if (!a.template) {
+      issues.push({ level: 'error', message: `Artifact "${a.id}" is missing "template"`, artifactId: a.id });
+    }
     else if (!a.templateExists) {
-      issues.push({ level: 'error', message: `Template "templates/${a.template}" for "${a.id}" does not exist` });
+      issues.push({
+        level: 'error',
+        message: `Template "templates/${a.template}" for "${a.id}" does not exist`,
+        artifactId: a.id,
+      });
     }
     for (const r of a.requires) {
       if (!ids.has(r) && !detail.artifacts.some((x) => x.id === r)) {
-        issues.push({ level: 'error', message: `Artifact "${a.id}" requires unknown artifact "${r}"` });
+        issues.push({
+          level: 'error',
+          message: `Artifact "${a.id}" requires unknown artifact "${r}"`,
+          artifactId: a.id,
+        });
       }
     }
   }
 
   const cycle = findDependencyCycle(detail.artifacts);
-  if (cycle) issues.push({ level: 'error', message: `Cyclic dependency detected: ${cycle.join(' → ')}` });
+  if (cycle) {
+    issues.push({ level: 'error', message: `Cyclic dependency detected: ${cycle.join(' → ')}`, artifactId: cycle[0] });
+  }
 
   if (detail.apply) {
     if (detail.apply.requires.length === 0) {
-      issues.push({ level: 'error', message: 'apply.requires needs at least one artifact' });
+      issues.push({ level: 'error', message: 'apply.requires needs at least one artifact', apply: true });
     }
     for (const r of detail.apply.requires) {
-      if (!ids.has(r)) issues.push({ level: 'error', message: `apply requires unknown artifact "${r}"` });
+      if (!ids.has(r)) {
+        issues.push({ level: 'error', message: `apply requires unknown artifact "${r}"`, apply: true });
+      }
     }
   }
   return issues;
@@ -261,22 +282,112 @@ export function readDefaultSchema(workspaceRoot: string): string {
 }
 
 /**
- * Sets the project default schema in `openspec/config.yaml`, editing only the
- * top-level `schema:` line so comments and other settings are preserved.
+ * Rewrites only the top-level `schema:` line of a YAML file (adding it when
+ * missing), so comments and other settings are preserved.
  */
-export function writeDefaultSchema(workspaceRoot: string, name: string): void {
-  const configPath = path.join(workspaceRoot, 'openspec', 'config.yaml');
-  const content = fs.existsSync(configPath) ? fs.readFileSync(configPath, 'utf8') : '';
+export function setSchemaLine(filePath: string, name: string): void {
+  const content = fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : '';
   const line = `schema: ${name}`;
   const updated = /^schema:.*$/m.test(content)
     ? content.replace(/^schema:.*$/m, line)
     : `${line}\n${content}`;
-  fs.mkdirSync(path.dirname(configPath), { recursive: true });
-  fs.writeFileSync(configPath, updated, 'utf8');
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, updated, 'utf8');
 }
 
-/** Copies a schema into the project's `openspec/schemas/<name>` for customization. */
-export function forkSchema(sourceDir: string, workspaceRoot: string, name: string): string {
+/** Sets the project default schema in `openspec/config.yaml`. */
+export function writeDefaultSchema(workspaceRoot: string, name: string): void {
+  setSchemaLine(path.join(workspaceRoot, 'openspec', 'config.yaml'), name);
+}
+
+/** Returns the schema explicitly set by `openspec/config.yaml`, if any. */
+function readConfiguredSchema(workspaceRoot: string): string | undefined {
+  const configPath = path.join(workspaceRoot, 'openspec', 'config.yaml');
+  if (!fs.existsSync(configPath)) return undefined;
+  try {
+    const parsed: any = yaml.load(fs.readFileSync(configPath, 'utf8'));
+    return typeof parsed?.schema === 'string' ? parsed.schema.trim() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Active changes whose `.openspec.yaml` explicitly names `schema`. Changes
+ * without metadata follow the project default and are not included; archived
+ * changes are never included.
+ */
+export function findChangesNamingSchema(
+  workspaceRoot: string,
+  schema: string
+): Array<{ name: string; metadataPath: string }> {
+  const changesDir = path.join(workspaceRoot, 'openspec', 'changes');
+  if (!fs.existsSync(changesDir)) return [];
+  const result: Array<{ name: string; metadataPath: string }> = [];
+  for (const entry of fs.readdirSync(changesDir, { withFileTypes: true })) {
+    if (!entry.isDirectory() || entry.name === 'archive' || entry.name.startsWith('.')) continue;
+    const metadataPath = path.join(changesDir, entry.name, '.openspec.yaml');
+    if (!fs.existsSync(metadataPath)) continue;
+    try {
+      const meta: any = yaml.load(fs.readFileSync(metadataPath, 'utf8'));
+      if (typeof meta?.schema === 'string' && meta.schema.trim() === schema) {
+        result.push({ name: entry.name, metadataPath });
+      }
+    } catch {
+      // unreadable metadata is left alone
+    }
+  }
+  return result.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** Reads a schema directory's lineage sidecar, if it has a valid one. */
+export function readLineage(schemaDir: string): SchemaLineage | undefined {
+  const file = path.join(schemaDir, LINEAGE_FILE);
+  if (!fs.existsSync(file)) return undefined;
+  try {
+    const raw: any = yaml.load(fs.readFileSync(file, 'utf8'));
+    if (!raw || typeof raw.schema !== 'string' || !SOURCE_PRECEDENCE.includes(raw.source)) return undefined;
+    const lineage: SchemaLineage = { schema: raw.schema, source: raw.source };
+    if (Number.isInteger(raw.version)) lineage.version = raw.version;
+    if (raw.forkedAt !== undefined) lineage.forkedAt = String(raw.forkedAt);
+    return lineage;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Writes a schema directory's lineage sidecar. */
+export function writeLineage(
+  schemaDir: string,
+  lineage: Pick<SchemaLineage, 'schema' | 'source' | 'version' | 'forkedAt'>
+): void {
+  const data: Record<string, unknown> = { schema: lineage.schema, source: lineage.source };
+  if (lineage.version !== undefined) data.version = lineage.version;
+  if (lineage.forkedAt !== undefined) data.forkedAt = lineage.forkedAt;
+  const header =
+    '# Written by OpenSpec for VS Code when this schema was customized.\n' +
+    '# It records the schema this one was copied from. Delete it to forget the link.\n';
+  fs.writeFileSync(path.join(schemaDir, LINEAGE_FILE), header + yaml.dump(data), 'utf8');
+}
+
+export interface ForkOrigin {
+  schema: string;
+  source: SchemaSource;
+  version?: number;
+}
+
+/**
+ * Copies a schema into the project's `openspec/schemas/<name>` for
+ * customization, recording `origin` as its lineage. A lineage file copied from
+ * the source is replaced (or dropped when no origin is given).
+ */
+export function forkSchema(
+  sourceDir: string,
+  workspaceRoot: string,
+  name: string,
+  origin?: ForkOrigin,
+  today: Date = new Date()
+): string {
   if (!SCHEMA_NAME_PATTERN.test(name)) {
     throw new Error(`Schema name "${name}" must be kebab-case (e.g. my-workflow)`);
   }
@@ -293,7 +404,145 @@ export function forkSchema(sourceDir: string, workspaceRoot: string, name: strin
   const schemaPath = path.join(dest, 'schema.yaml');
   const content = fs.readFileSync(schemaPath, 'utf8');
   fs.writeFileSync(schemaPath, content.replace(/^name:.*$/m, `name: ${name}`), 'utf8');
+
+  fs.rmSync(path.join(dest, LINEAGE_FILE), { force: true });
+  if (origin) {
+    writeLineage(dest, { ...origin, forkedAt: today.toISOString().slice(0, 10) });
+  }
   return dest;
+}
+
+export interface RenameResult {
+  dest: string;
+  defaultUpdated: boolean;
+  updatedChanges: string[];
+}
+
+/**
+ * Renames a project schema: its directory, its `name:`, the project default
+ * when it pointed at the schema, active changes whose metadata names it, and
+ * the lineage of other project forks made from it.
+ */
+export function renameSchema(workspaceRoot: string, oldName: string, newName: string): RenameResult {
+  if (!SCHEMA_NAME_PATTERN.test(newName)) {
+    throw new Error(`Schema name "${newName}" must be kebab-case (e.g. my-workflow)`);
+  }
+  const schemasDir = getProjectSchemasDir(workspaceRoot);
+  const src = path.join(schemasDir, oldName);
+  const dest = path.join(schemasDir, newName);
+  if (!fs.existsSync(path.join(src, 'schema.yaml'))) {
+    throw new Error(`No project schema named "${oldName}"`);
+  }
+  if (fs.existsSync(dest)) {
+    throw new Error(`A project schema named "${newName}" already exists`);
+  }
+
+  fs.renameSync(src, dest);
+  const schemaPath = path.join(dest, 'schema.yaml');
+  const content = fs.readFileSync(schemaPath, 'utf8');
+  fs.writeFileSync(
+    schemaPath,
+    /^name:.*$/m.test(content) ? content.replace(/^name:.*$/m, `name: ${newName}`) : `name: ${newName}\n${content}`,
+    'utf8'
+  );
+
+  const defaultUpdated = readConfiguredSchema(workspaceRoot) === oldName;
+  if (defaultUpdated) writeDefaultSchema(workspaceRoot, newName);
+
+  const changes = findChangesNamingSchema(workspaceRoot, oldName);
+  for (const change of changes) setSchemaLine(change.metadataPath, newName);
+
+  for (const sibling of listSchemaDirs(schemasDir, 'project')) {
+    const lineage = readLineage(sibling.path);
+    if (lineage && lineage.source === 'project' && lineage.schema === oldName) {
+      writeLineage(sibling.path, { ...lineage, schema: newName });
+    }
+  }
+
+  return { dest, defaultUpdated, updatedChanges: changes.map((c) => c.name) };
+}
+
+/**
+ * The default schema to use after deleting `schema` when it was the default:
+ * the same name if another location still provides it, else the fork's source
+ * if it still resolves, else the built-in default.
+ */
+export function defaultAfterDelete(
+  schema: Pick<SchemaDetail, 'name' | 'shadows' | 'forkedFrom'>
+): string {
+  if (schema.shadows.length > 0 || schema.name === DEFAULT_SCHEMA) return schema.name;
+  if (schema.forkedFrom?.available) return schema.forkedFrom.schema;
+  return DEFAULT_SCHEMA;
+}
+
+export type SchemaFileStatus = 'changed' | 'added' | 'removed';
+
+export interface SchemaFileDiff {
+  /** Path relative to the schema directory, with `/` separators. */
+  path: string;
+  status: SchemaFileStatus;
+}
+
+function listFiles(dir: string, prefix = ''): string[] {
+  if (!fs.existsSync(dir)) return [];
+  const files: string[] = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name.startsWith('.')) continue;
+    const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) files.push(...listFiles(path.join(dir, entry.name), rel));
+    else if (entry.isFile()) files.push(rel);
+  }
+  return files;
+}
+
+function comparableContent(rel: string, buf: Buffer): string {
+  const text = buf.toString('utf8').replace(/\r\n/g, '\n');
+  // A fork always differs from its source by its name, which is not a customization.
+  return rel === 'schema.yaml' ? text.replace(/^name:.*$/m, '') : text;
+}
+
+/**
+ * Compares a fork with its source, file by file. Hidden files (including the
+ * lineage sidecar) are ignored, as is the `name:` line of `schema.yaml`.
+ */
+export function compareSchemaDirs(forkDir: string, sourceDir: string): SchemaFileDiff[] {
+  const forkFiles = new Set(listFiles(forkDir));
+  const sourceFiles = new Set(listFiles(sourceDir));
+  const all = [...new Set([...forkFiles, ...sourceFiles])].sort((a, b) =>
+    a === 'schema.yaml' ? -1 : b === 'schema.yaml' ? 1 : a.localeCompare(b)
+  );
+  const diffs: SchemaFileDiff[] = [];
+  for (const rel of all) {
+    if (!sourceFiles.has(rel)) diffs.push({ path: rel, status: 'added' });
+    else if (!forkFiles.has(rel)) diffs.push({ path: rel, status: 'removed' });
+    else {
+      const a = fs.readFileSync(path.join(forkDir, ...rel.split('/')));
+      const b = fs.readFileSync(path.join(sourceDir, ...rel.split('/')));
+      if (comparableContent(rel, a) !== comparableContent(rel, b)) diffs.push({ path: rel, status: 'changed' });
+    }
+  }
+  return diffs;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** 0-based line of the `- id: <id>` entry in `schema.yaml` text, or -1. */
+export function findArtifactLine(text: string, id: string): number {
+  const re = new RegExp(`^\\s*-\\s*id:\\s*(['"]?)${escapeRegExp(id)}\\1\\s*(#.*)?$`);
+  return text.split(/\r?\n/).findIndex((line) => re.test(line));
+}
+
+/** 0-based line of the top-level `apply:` key in `schema.yaml` text, or -1. */
+export function findApplyLine(text: string): number {
+  return text.split(/\r?\n/).findIndex((line) => /^apply:\s*(#.*)?$/.test(line));
+}
+
+/** 0-based line an issue belongs on in `schema.yaml` text (0 when unknown). */
+export function findIssueLine(text: string, issue: SchemaIssue): number {
+  const line = issue.artifactId ? findArtifactLine(text, issue.artifactId) : issue.apply ? findApplyLine(text) : -1;
+  return line < 0 ? 0 : line;
 }
 
 function loadRaw(schemaPath: string): any {
