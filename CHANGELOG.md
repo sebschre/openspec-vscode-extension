@@ -4,6 +4,13 @@ All notable changes to this extension are documented here. This file is maintain
 automatically by [release-please](https://github.com/googleapis/release-please) from
 [Conventional Commits](https://www.conventionalcommits.org/).
 
+## [0.4.0](https://github.com/sebschre/openspec-vscode-extension/compare/v0.3.0...v0.4.0) (2026-11-07)
+
+
+### Features
+
+* **explorer:** schema-aware Active Changes and cross-linked Living Specs ([#15](https://github.com/sebschre/openspec-vscode-extension/issues/15)) ([1e0d106](https://github.com/sebschre/openspec-vscode-extension/commit/1e0d1066ea68a8c4bb1d77e420eb10bd62d1d7ce))
+
 ## [0.3.0](https://github.com/sebschre/openspec-vscode-extension/compare/v0.2.0...v0.3.0) (2026-11-07)
 
 
