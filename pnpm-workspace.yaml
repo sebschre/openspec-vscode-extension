@@ -1,0 +1,4 @@
+# Dependencies allowed to run install scripts (pnpm blocks all others by default).
+onlyBuiltDependencies:
+  - '@vscode/vsce-sign'
+  - esbuild

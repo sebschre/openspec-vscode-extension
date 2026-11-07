@@ -36,9 +36,9 @@ docs/marketplace/         README packaged for the marketplaces
 Requires Node.js 22 (see `.nvmrc`).
 
 ```bash
-npm install
-npm run build        # dev build with source maps → dist/
-npm run watch        # rebuild on change
+pnpm install
+pnpm build        # dev build with source maps → dist/
+pnpm watch        # rebuild on change
 ```
 
 Press <kbd>F5</kbd> in VS Code to launch an Extension Development Host. Open any folder that contains an `openspec/` directory (this repository works too).
@@ -47,11 +47,11 @@ Press <kbd>F5</kbd> in VS Code to launch an Extension Development Host. Open any
 
 | Command | What it does |
 | --- | --- |
-| `npm run typecheck` | `tsc --noEmit` over extension, webview and tests |
-| `npm test` | bundles `test/*.test.ts` with esbuild and runs them with `node --test` (`npm test -- schemas` runs just the matching files) |
-| `npm run validate:specs` | `openspec validate --all --strict` on this repo's own specs and changes |
-| `npm run package` | production build + `.vsix` packaged with the marketplace README |
-| `npm run verify:vsix -- <file>` | checks identity, version, icons, README/CHANGELOG and that no sources leaked into the package |
+| `pnpm typecheck` | `tsc --noEmit` over extension, webview and tests |
+| `pnpm test` | bundles `test/*.test.ts` with esbuild and runs them with `node --test` (`pnpm test schemas` runs just the matching files) |
+| `pnpm validate:specs` | `openspec validate --all --strict` on this repo's own specs and changes |
+| `pnpm package` | production build + `.vsix` packaged with the marketplace README |
+| `pnpm verify:vsix <file>` | checks identity, version, icons, README/CHANGELOG and that no sources leaked into the package |
 
 CI runs all of these on every pull request and uploads the `.vsix` as a workflow artifact.
 

@@ -58,7 +58,7 @@ secrets, so that only the release job on `main` can read them.
 
 1. Sign in at <https://open-vsx.org> with GitHub and sign the publisher agreement.
 2. Create an access token under *Settings → Access Tokens*.
-3. Create the namespace once: `npx ovsx create-namespace sebschre -p <token>`.
+3. Create the namespace once: `pnpm dlx ovsx create-namespace sebschre -p <token>`.
 4. Save the token as the secret `OVSX_PAT` (on the `marketplace` environment, or as a repository secret).
 
 If `OVSX_PAT` is missing, the Open VSX step is skipped with a warning. A missing `VSCE_PAT`

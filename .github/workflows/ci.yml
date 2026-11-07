@@ -29,19 +29,19 @@ jobs:
       - uses: ./.github/actions/setup
 
       - name: Typecheck
-        run: npm run typecheck
+        run: pnpm run typecheck
 
       - name: Unit & integration tests
-        run: npm test
+        run: pnpm test
 
       - name: Validate OpenSpec specs and changes
-        run: npm run validate:specs
+        run: pnpm run validate:specs
 
       - name: Package VSIX (marketplace README, production build)
-        run: npm run package -- --out openspec-vscode-extension.vsix
+        run: pnpm run package --out openspec-vscode-extension.vsix
 
       - name: Verify VSIX contents
-        run: npm run verify:vsix -- openspec-vscode-extension.vsix
+        run: pnpm run verify:vsix openspec-vscode-extension.vsix
 
       - name: Upload VSIX
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -10,7 +10,7 @@ updates:
       actions:
         patterns: ['*']
 
-  - package-ecosystem: npm
+  - package-ecosystem: npm # also covers pnpm-lock.yaml
     directory: /
     schedule:
       interval: monthly

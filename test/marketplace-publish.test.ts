@@ -115,7 +115,7 @@ describe('Marketplace release pipeline', () => {
     assert.match(pkg.scripts.package, /--readme-path docs\/marketplace\/README\.md/);
     const readme = fs.readFileSync(path.join(rootDir, 'docs/marketplace/README.md'), 'utf8');
     assert.match(readme, /^# OpenSpec for VS Code/);
-    assert.doesNotMatch(readme, /npm run |git clone/, 'Marketplace README must not contain contributor instructions');
+    assert.doesNotMatch(readme, /p?npm run |pnpm install|git clone/, 'Marketplace README must not contain contributor instructions');
   });
 
   it('ships a CHANGELOG and keeps release-please in sync with package.json', () => {
