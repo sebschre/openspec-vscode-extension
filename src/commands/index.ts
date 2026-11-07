@@ -257,5 +257,12 @@ export function registerCommands(
       vscode.window.showInformationMessage('OpenSpec terminal session has been reset.');
     })
   );
+
+  // Command: Configure Agent Command
+  context.subscriptions.push(
+    vscode.commands.registerCommand('openspec.configureAgentCommand', () =>
+      TerminalManager.getInstance().configureAgentCommand()
+    )
+  );
 }
 
