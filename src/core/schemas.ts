@@ -370,6 +370,37 @@ export function writeLineage(
   fs.writeFileSync(path.join(schemaDir, LINEAGE_FILE), header + yaml.dump(data), 'utf8');
 }
 
+/** Files the OS drops into folders on its own; they never make a folder "used". */
+const OS_JUNK_FILES = new Set(['.DS_Store', 'Thumbs.db', 'desktop.ini']);
+
+function holdsOnlyLeftovers(dir: string): boolean {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      if (!holdsOnlyLeftovers(path.join(dir, entry.name))) return false;
+    } else if (!OS_JUNK_FILES.has(entry.name)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Makes `dir` available as a new schema directory. A folder holding nothing but
+ * empty folders and OS clutter (left behind when git reverts or deletes a
+ * schema, since git does not track folders) is removed. Returns false when the
+ * path holds real content and must not be reused.
+ */
+export function claimSchemaDir(dir: string): boolean {
+  if (!fs.existsSync(dir)) return true;
+  try {
+    if (!fs.statSync(dir).isDirectory() || !holdsOnlyLeftovers(dir)) return false;
+    fs.rmSync(dir, { recursive: true, force: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export interface ForkOrigin {
   schema: string;
   source: SchemaSource;
@@ -392,7 +423,7 @@ export function forkSchema(
     throw new Error(`Schema name "${name}" must be kebab-case (e.g. my-workflow)`);
   }
   const dest = path.join(getProjectSchemasDir(workspaceRoot), name);
-  if (fs.existsSync(dest)) {
+  if (!claimSchemaDir(dest)) {
     throw new Error(`A project schema named "${name}" already exists`);
   }
   if (!fs.existsSync(path.join(sourceDir, 'schema.yaml'))) {
@@ -433,7 +464,7 @@ export function renameSchema(workspaceRoot: string, oldName: string, newName: st
   if (!fs.existsSync(path.join(src, 'schema.yaml'))) {
     throw new Error(`No project schema named "${oldName}"`);
   }
-  if (fs.existsSync(dest)) {
+  if (!claimSchemaDir(dest)) {
     throw new Error(`A project schema named "${newName}" already exists`);
   }
 
