@@ -4,6 +4,13 @@ All notable changes to this extension are documented here. This file is maintain
 automatically by [release-please](https://github.com/googleapis/release-please) from
 [Conventional Commits](https://www.conventionalcommits.org/).
 
+## [0.5.0](https://github.com/sebschre/openspec-vscode-extension/compare/v0.4.1...v0.5.0) (2026-11-07)
+
+
+### Features
+
+* **terminal:** agent command presets and Configure Agent Command ([#19](https://github.com/sebschre/openspec-vscode-extension/issues/19)) ([918ada7](https://github.com/sebschre/openspec-vscode-extension/commit/918ada738520e91c6ad919d01ea96a59e15899d6))
+
 ## [0.4.1](https://github.com/sebschre/openspec-vscode-extension/compare/v0.4.0...v0.4.1) (2026-11-07)
 
 
