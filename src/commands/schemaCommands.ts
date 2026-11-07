@@ -5,6 +5,7 @@ import { OpenSpecCliBridge } from '../core/cli';
 import {
   SCHEMA_NAME_PATTERN,
   addArtifact,
+  claimSchemaDir,
   compareSchemaDirs,
   defaultAfterDelete,
   findApplyLine,
@@ -12,6 +13,7 @@ import {
   findChangesNamingSchema,
   findIssueLine,
   forkSchema,
+  getProjectSchemasDir,
   removeArtifact,
   renameSchema,
   setArtifactRequires,
@@ -352,6 +354,11 @@ export function registerSchemaCommands(
     );
     if (!artifacts || artifacts.length === 0) return;
 
+    // Clear an empty folder left behind by a reverted schema so the CLI can reuse the name.
+    if (!claimSchemaDir(path.join(getProjectSchemasDir(root), name.trim()))) {
+      vscode.window.showErrorMessage(`OpenSpec: A project schema named "${name.trim()}" already exists`);
+      return;
+    }
     const res = await cli.initSchema(
       name.trim(),
       description,

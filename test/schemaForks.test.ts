@@ -6,6 +6,7 @@ import * as path from 'node:path';
 import * as yaml from 'js-yaml';
 import {
   LINEAGE_FILE,
+  claimSchemaDir,
   compareSchemaDirs,
   defaultAfterDelete,
   findApplyLine,
@@ -97,6 +98,25 @@ describe('Fork lineage', () => {
     assert.strictEqual(readLineage(third), undefined);
   });
 
+  it('reuses a name whose folder was left empty by a git revert', () => {
+    const leftover = path.join(projectSchemas, 'team-flow');
+    fs.mkdirSync(path.join(leftover, 'templates'), { recursive: true });
+    fs.writeFileSync(path.join(leftover, '.DS_Store'), '');
+    fs.writeFileSync(path.join(leftover, 'templates', '.DS_Store'), '');
+    const dest = forkSchema(pkgDir, workspace, 'team-flow');
+    assert.ok(fs.existsSync(path.join(dest, 'schema.yaml')));
+    assert.ok(!fs.existsSync(path.join(dest, '.DS_Store')));
+  });
+
+  it('refuses a name whose folder still holds files', () => {
+    const occupied = path.join(projectSchemas, 'team-flow');
+    fs.mkdirSync(path.join(occupied, 'templates'), { recursive: true });
+    fs.writeFileSync(path.join(occupied, 'templates', 'notes.md'), 'keep');
+    assert.throws(() => forkSchema(pkgDir, workspace, 'team-flow'), /already exists/);
+    assert.strictEqual(claimSchemaDir(occupied), false);
+    assert.ok(fs.existsSync(path.join(occupied, 'templates', 'notes.md')));
+  });
+
   it('ignores malformed lineage files', () => {
     const dest = forkSchema(pkgDir, workspace, 'team-flow');
     fs.writeFileSync(path.join(dest, LINEAGE_FILE), 'schema: x\nsource: somewhere\n');
@@ -182,6 +202,8 @@ describe('Renaming and deleting project schemas', () => {
     forkSchema(pkgDir, workspace, 'a');
     forkSchema(pkgDir, workspace, 'b');
     assert.throws(() => renameSchema(workspace, 'a', 'b'), /already exists/);
+    fs.mkdirSync(path.join(projectSchemas, 'c'));
+    assert.strictEqual(renameSchema(workspace, 'b', 'c').dest, path.join(projectSchemas, 'c'));
     assert.throws(() => renameSchema(workspace, 'a', 'Not Kebab'), /kebab-case/);
     assert.throws(() => renameSchema(workspace, 'missing', 'c'), /No project schema/);
     assert.strictEqual(readDefaultSchema(workspace), 'spec-driven');
